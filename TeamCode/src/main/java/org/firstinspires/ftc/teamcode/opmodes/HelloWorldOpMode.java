@@ -5,11 +5,11 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 /**
  * HelloWorldOpMode
- * 
+ *
  * This is a basic OpMode designed for students who are new to FTC programming.
  * Its purpose is to demonstrate how to use 'telemetry' to display information 
  * on the Driver Station screen.
- * 
+ *
  * Students: Try changing the text inside the quotes or adding new telemetry lines!
  */
 @TeleOp(name = "Hello World", group = "Tutorial")

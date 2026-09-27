@@ -7,7 +7,7 @@ import org.firstinspires.ftc.teamcode.mechanisms.TestBenchMechanisms;
 
 /**
  * TestOpMode
- * 
+ *
  * This OpMode demonstrates more advanced controls:
  * - Motors, Servos, and Digital Sensors
  * - Toggle logic (debouncing)
