@@ -5,6 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 import org.firstinspires.ftc.teamcode.mechanisms.DriveTrainMechanism;
+import org.firstinspires.ftc.teamcode.mechanisms.PollenShooterMechanism;
 
 /**
  * DriveTrainOpMode
@@ -21,6 +22,7 @@ import org.firstinspires.ftc.teamcode.mechanisms.DriveTrainMechanism;
 public class DriveTrainOpMode extends OpMode {
     // Instantiate the drivetrain mechanism
     private DriveTrainMechanism drivetrain = new DriveTrainMechanism();
+    private PollenShooterMechanism pollenShooter = new PollenShooterMechanism();
     private DcMotor intake;
     private Servo flipper;
 
@@ -32,12 +34,17 @@ public class DriveTrainOpMode extends OpMode {
     private boolean isFlipped = false;
     private boolean previousY = false;
 
+    // Previous states for d-pad edge detection
+    private boolean previousDpadUp = false;
+    private boolean previousDpadDown = false;
+
     @Override
     public void init() {
         // Initialize the hardware using the mechanism class
         drivetrain.init(hardwareMap);
+        pollenShooter.init(hardwareMap);
 
-            // Initialize inta` motor
+        // Initialize intake motor
         intake = hardwareMap.get(DcMotor.class, "intake");
 
         // Initialize flipper servo configured as "servo" in Driver Hub
@@ -52,6 +59,8 @@ public class DriveTrainOpMode extends OpMode {
         telemetry.addLine("RS X: Rotate");
         telemetry.addLine("RT/LT: Intake");
         telemetry.addLine("Y Button: Toggle Flipper (90 deg)");
+        telemetry.addLine("A Button: Run Shooter");
+        telemetry.addLine("D-Pad Up/Down: Adjust Shooter RPM");
     }
 
     @Override
@@ -77,12 +86,35 @@ public class DriveTrainOpMode extends OpMode {
         }
         previousY = currentY;
 
+        // D-pad Up/Down to adjust Shooter1 speed by 100 rpm (edge detection)
+        boolean currentDpadUp = gamepad1.dpad_up;
+        boolean currentDpadDown = gamepad1.dpad_down;
+
+        if (currentDpadUp && !previousDpadUp) {
+            pollenShooter.adjustRpm(100);
+        }
+        if (currentDpadDown && !previousDpadDown) {
+            pollenShooter.adjustRpm(-100);
+        }
+        previousDpadUp = currentDpadUp;
+        previousDpadDown = currentDpadDown;
+
+        // Button A to run Shooter1 at target rpm
+        if (gamepad1.a) {
+            pollenShooter.runShooter();
+        } else {
+            pollenShooter.stopShooter();
+        }
+
         // Display power levels and servo status for debugging/verification
         telemetry.addData("Status", "Running");
         telemetry.addData("Drive Inputs", "D: %.2f, S: %.2f, R: %.2f", drive, strafe, rotate);
         telemetry.addData("Intake Power", "%.2f", intakePower);
         telemetry.addData("Flipper State", isFlipped ? "Flipped (90°)" : "Rest (0°)");
         telemetry.addData("Flipper Position", "%.2f", flipper.getPosition());
+        telemetry.addData("Shooter Target RPM", pollenShooter.getTargetRpm());
+        telemetry.addData("Shooter Real RPM","%.2f",pollenShooter.getCurrentRpm());
+
         telemetry.addData("Motor Powers", "FL: %.2f, FR: %.2f, BL: %.2f, BR: %.2f", 
             drivetrain.getFrontLeftPower(),
             drivetrain.getFrontRightPower(),
@@ -94,6 +126,7 @@ public class DriveTrainOpMode extends OpMode {
     public void stop() {
         // Optional: Ensure motors are stopped when OpMode ends
         drivetrain.setMotorPowers(0, 0, 0, 0);
+        pollenShooter.stopShooter();
         if (intake != null) {
             intake.setPower(0);
         }
