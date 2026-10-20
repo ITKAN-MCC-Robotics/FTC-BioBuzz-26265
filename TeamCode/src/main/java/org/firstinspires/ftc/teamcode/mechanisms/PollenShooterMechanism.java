@@ -20,7 +20,7 @@ public class PollenShooterMechanism {
         shooter1 = hwMap.get(DcMotorEx.class, "Shooter1");
 
         // RUN_USING_ENCODER is required for velocity control
-        shooter1.setDirection(DcMotorSimple.Direction.REVERSE);
+        shooter1.setDirection(DcMotorSimple.Direction.FORWARD);
         shooter1.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         shooter1.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
     }

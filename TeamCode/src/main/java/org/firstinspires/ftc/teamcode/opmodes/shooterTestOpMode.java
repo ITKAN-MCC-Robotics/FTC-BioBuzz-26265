@@ -40,7 +40,7 @@ public class shooterTestOpMode extends OpMode {
         shooter = hardwareMap.get(DcMotorEx.class, "shooter");
 
         // 2. Flip motor direction for shooter launch rotation
-        shooter.setDirection(DcMotorSimple.Direction.REVERSE);
+        shooter.setDirection(DcMotorSimple.Direction.FORWARD);
 
         // 3. Set run mode to RUN_USING_ENCODER for closed-loop velocity control
         shooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
