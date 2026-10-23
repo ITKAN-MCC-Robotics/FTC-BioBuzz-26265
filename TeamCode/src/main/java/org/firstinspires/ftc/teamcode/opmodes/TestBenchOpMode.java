@@ -14,9 +14,9 @@ import org.firstinspires.ftc.teamcode.mechanisms.TestBenchMechanisms;
  * - Variable speed control
  */
 @TeleOp(name = "Test Bench OpMode", group = "Tutorial")
-public class TestOpMode extends OpMode {
+public class TestBenchOpMode extends OpMode {
 
-    // Instantiate our hardware class
+    // Instantiate our hardware classes
     TestBenchMechanisms robot = new TestBenchMechanisms();
 
     // Variables to keep track of our robot's state
@@ -31,7 +31,7 @@ public class TestOpMode extends OpMode {
     public void init() {
         // --- 1. Initialization ---
         robot.init(hardwareMap);
-        
+
         // Optional: Reverse the motor if it's spinning the wrong way
         // robot.reverseMotor(true);
         
@@ -39,6 +39,7 @@ public class TestOpMode extends OpMode {
         telemetry.addLine("--- CONTROLS ---");
         telemetry.addLine("A: Start Motor (0.5)");
         telemetry.addLine("B: Stop Motor");
+        telemetry.addLine("X: Transfer Motor Forward (80%)");
         telemetry.addLine("D-Pad Up/Down: Control Servo");
         telemetry.addLine("RB: Increase Speed | RT: Decrease Speed");
         telemetry.addLine("Touch Sensor: Toggle Motor");
@@ -55,6 +56,7 @@ public class TestOpMode extends OpMode {
             motorRunning = false;
             motorPower = 0.0;
         }
+
 
         // --- 3. Speed Adjustments (RB/RT) ---
         // RB (Right Bumper) increases the power
