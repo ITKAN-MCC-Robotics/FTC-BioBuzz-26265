@@ -23,14 +23,19 @@ public class TransferMechanism {
      * @param hwMap HardwareMap from OpMode
      */
     public void init(HardwareMap hwMap) {
-        transferMotor = hwMap.get(DcMotor.class, "Transfer");
-        shooter1Gate = hwMap.get(Servo.class, "Shooter1Gate");
+        transferMotor = hwMap.get(DcMotor.class, "transferMotor");
+        
+        try {
+            shooter1Gate = hwMap.get(Servo.class, "Shooter1Gate");
+            closeShooterGate();
+        } catch (Exception e) {
+            // Servo gate not installed / configured yet
+            shooter1Gate = null;
+        }
 
         transferMotor.setDirection(DcMotorSimple.Direction.FORWARD);
         transferMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         transferMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
-        closeShooterGate();
     }
 
     /**

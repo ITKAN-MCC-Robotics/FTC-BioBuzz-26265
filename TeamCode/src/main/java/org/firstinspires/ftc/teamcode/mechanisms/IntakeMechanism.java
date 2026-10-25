@@ -18,7 +18,7 @@ public class IntakeMechanism {
      * @param hwMap HardwareMap from OpMode
      */
     public void init(HardwareMap hwMap) {
-        intakeMotor = hwMap.get(DcMotor.class, "Intake");
+        intakeMotor = hwMap.get(DcMotor.class, "intakeMotor");
 
         intakeMotor.setDirection(DcMotorSimple.Direction.FORWARD);
         intakeMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);

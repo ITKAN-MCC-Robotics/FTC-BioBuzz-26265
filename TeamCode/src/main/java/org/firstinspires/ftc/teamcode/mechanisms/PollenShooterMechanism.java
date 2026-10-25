@@ -4,33 +4,44 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.util.Range;
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 /**
  * Mechanism for the Pollen Shooter.
- * Manages the Shooter1 flywheel motor, velocity setpoints, speed permissives,
- * and flywheel toggling.
+ * Uses closed-loop PIDF velocity control based on motor encoder specifications.
  */
 public class PollenShooterMechanism {
     public static final double DEFAULT_RPM = 2800.0;
-    public static final double MAX_RPM = 4500.0;
-    public static final double RPM_TOLERANCE = 100.0; // Allowed error for speed permissive
+    public static final double MAX_RPM = 6000.0;
+    public static final double TICKS_PER_REV = 28.0; // 28 TPR for goBILDA / REV 1:1 motor
+    public static final double RPM_TOLERANCE = 300.0; // Speed permissive tolerance
 
-    private DcMotorEx shooter1;
+    private DcMotorEx shooterP;
     private double targetRpm = DEFAULT_RPM;
     private boolean flywheelEnabled = false;
 
     /**
-     * Initializes the shooter hardware.
+     * Initializes the shooter hardware and configures closed-loop PIDF velocity control.
      * @param hwMap The hardware map from the OpMode
      */
     public void init(HardwareMap hwMap) {
-        shooter1 = hwMap.get(DcMotorEx.class, "Shooter1");
+        shooterP = hwMap.get(DcMotorEx.class, "shooterP");
 
-        shooter1.setDirection(DcMotorSimple.Direction.FORWARD);
-        shooter1.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        shooter1.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        // Set direction for shooter launch
+        shooterP.setDirection(DcMotorSimple.Direction.REVERSE);
+        shooterP.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        shooterP.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+
+        // Configure PIDF feedforward & proportional gain for closed-loop velocity control
+        // Max Ticks/Sec = (6000 RPM * 28 TPR) / 60 = 2800 ticks/sec
+        double maxTicksPerSecond = (MAX_RPM * TICKS_PER_REV) / 60.0;
+        double f = 32767.0 / maxTicksPerSecond; // Feedforward F ≈ 11.7
+        double p = 10.0;
+        double i = 1.0;
+        double d = 0.0;
+
+        shooterP.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, new PIDFCoefficients(p, i, d, f));
     }
 
     /**
@@ -84,13 +95,13 @@ public class PollenShooterMechanism {
     }
 
     /**
-     * Runs the shooter at the current target RPM using encoder velocity control.
+     * Runs the shooter at target RPM using closed-loop encoder velocity control (ticks/sec).
      */
     public void runShooter() {
-        if (shooter1 != null) {
-            // Convert RPM to degrees per second: 1 RPM = 360 deg / 60 sec = 6 deg/sec
-            double degreesPerSecond = targetRpm * 6.0;
-            shooter1.setVelocity(degreesPerSecond, AngleUnit.DEGREES);
+        if (shooterP != null) {
+            // Convert RPM to encoder ticks per second: (RPM * 28 TPR) / 60 sec
+            double targetTicksPerSec = targetRpm * (TICKS_PER_REV / 60.0);
+            shooterP.setVelocity(targetTicksPerSec);
         }
     }
 
@@ -98,8 +109,8 @@ public class PollenShooterMechanism {
      * Stops the shooter motor.
      */
     public void stopShooter() {
-        if (shooter1 != null) {
-            shooter1.setPower(0.0);
+        if (shooterP != null) {
+            shooterP.setPower(0.0);
         }
     }
 
@@ -115,24 +126,40 @@ public class PollenShooterMechanism {
     }
 
     /**
-     * Returns the current actual RPM of the shooter.
+     * Returns actual RPM magnitude calculated from encoder velocity.
      * @return current RPM
      */
     public double getCurrentRpm() {
-        if (shooter1 != null) {
-            double degreesPerSecond = shooter1.getVelocity(AngleUnit.DEGREES);
-            return degreesPerSecond / 6.0;
+        if (shooterP != null) {
+            double actualTicksPerSec = Math.abs(shooterP.getVelocity());
+            return actualTicksPerSec * (60.0 / TICKS_PER_REV);
         }
         return 0.0;
     }
 
     /**
-     * Checks if the flywheel has reached target speed (speed permissive).
-     * @return true if actual RPM is within RPM_TOLERANCE of target RPM.
+     * Returns raw velocity in encoder ticks per second.
+     * @return ticks/sec
+     */
+    public double getVelocityTicksPerSec() {
+        return shooterP != null ? Math.abs(shooterP.getVelocity()) : 0.0;
+    }
+
+    /**
+     * Returns raw encoder ticks position.
+     * @return encoder position ticks
+     */
+    public int getEncoderPosition() {
+        return shooterP != null ? shooterP.getCurrentPosition() : 0;
+    }
+
+    /**
+     * Checks if actual RPM is within speed permissive tolerance or at least 80% of target speed.
+     * @return true if speed setpoint reached
      */
     public boolean isAtTargetSpeed() {
         if (targetRpm <= 0) return true;
         double currentRpm = getCurrentRpm();
-        return Math.abs(currentRpm - targetRpm) <= RPM_TOLERANCE || currentRpm >= (targetRpm - RPM_TOLERANCE);
+        return Math.abs(currentRpm - targetRpm) <= RPM_TOLERANCE || currentRpm >= (targetRpm * 0.80);
     }
 }
