@@ -29,8 +29,8 @@ import org.firstinspires.ftc.teamcode.mechanisms.TransferMechanism;
  * - B Button: Stop shooting sequence (closes gate & stops transfer motor)
  * - X Button: Toggle flywheel on/off (default 2800 RPM)
  * - Y Button: Clear transfer & intake (reverses transfer & intake motors)
- * - Right Trigger: Run intake motor
- * - Right Bumper: Reverse intake motor
+ * - Right Trigger: Run intake motor & transfer motor (gate remains closed)
+ * - Right Bumper: Reverse intake motor only (transfer stopped, gate closed)
  * - [DISABLED] Left Trigger: Engage autoaim sequence
  * - [DISABLED] Left Bumper: Reset turret position back to zero position
  * - D-Pad Up: Increase shooter flywheel speed (100 RPM)
@@ -149,11 +149,17 @@ public class BiobuzzTeleOp extends OpMode {
                 transfer.stopTransfer();
             }
         } else {
-            // Shooting stopped - close gate and stop transfer unless Y (clear) is active
+            // Shooting stopped - keep gate closed
             transfer.closeShooterGate();
+
             if (gamepad1.y) {
+                // Y button: clear transfer & intake jam by reversing transfer motor
                 transfer.reverseTransfer();
+            } else if (gamepad1.right_trigger > 0.1) {
+                // Right Trigger (Intake): run transfer forward to feed elements into staging area
+                transfer.runTransfer();
             } else {
+                // Right Bumper (Reverse Intake) or Idle: stop transfer motor to keep staged elements inside
                 transfer.stopTransfer();
             }
 
