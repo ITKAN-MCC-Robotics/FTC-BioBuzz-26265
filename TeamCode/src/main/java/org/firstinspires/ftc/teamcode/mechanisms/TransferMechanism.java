@@ -11,8 +11,8 @@ import com.qualcomm.robotcore.hardware.Servo;
  */
 public class TransferMechanism {
     public static final double DEFAULT_TRANSFER_POWER = 1.0;
-    public static final double GATE_OPEN_POS = 1.0;
-    public static final double GATE_CLOSED_POS = 0.0;
+    public static final double GATE_OPEN_POS = 0.8;
+    public static final double GATE_CLOSED_POS = 1.0;
 
     private DcMotor transferMotor;
     private Servo shooter1Gate;

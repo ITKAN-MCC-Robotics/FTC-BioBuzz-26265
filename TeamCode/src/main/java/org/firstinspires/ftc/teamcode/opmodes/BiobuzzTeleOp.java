@@ -15,18 +15,18 @@ import org.firstinspires.ftc.teamcode.mechanisms.TransferMechanism;
  * - Pollen Shooter Flywheel
  * - Transfer Motor
  * - Intake Motor
+ * - Shooter Servo Gate
  *
  * Disabled / Commented out (Under Construction):
  * - Turret Aiming (no axon servo installed yet)
  * - Pinpoint Odometry (not ready)
- * - Shooter Servo Gate (not ready)
  *
  * Controls:
  * - Left Stick Y: Drive forward/backward
  * - Left Stick X: Strafe left/right
  * - Right Stick X: Rotate
- * - A Button: Start shooting sequence (spins flywheel & runs transfer motor when target speed reached)
- * - B Button: Stop shooting sequence (stops transfer motor)
+ * - A Button: Start shooting sequence (spins flywheel, opens gate & runs transfer motor when target speed reached)
+ * - B Button: Stop shooting sequence (closes gate & stops transfer motor)
  * - X Button: Toggle flywheel on/off (default 2800 RPM)
  * - Y Button: Clear transfer & intake (reverses transfer & intake motors)
  * - Right Trigger: Run intake motor
@@ -75,8 +75,8 @@ public class BiobuzzTeleOp extends OpMode {
         // pinpointOdom = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint"); // Odometry not ready
 
         telemetry.addLine("Biobuzz TeleOp Initialized");
-        telemetry.addLine("Active: Drivetrain, Shooter, Transfer, Intake");
-        telemetry.addLine("Disabled: Turret, Gate, Pinpoint Odom");
+        telemetry.addLine("Active: Drivetrain, Shooter, Transfer, Intake, Shooter Gate");
+        telemetry.addLine("Disabled: Turret, Pinpoint Odom");
     }
 
     @Override
@@ -140,20 +140,20 @@ public class BiobuzzTeleOp extends OpMode {
         // --- 4. Pollen Transfer & Shooter Execution ---
         if (isShootingSequenceActive) {
             shooter.runShooter();
-            // Permissive check: run transfer only once target speed is reached
+            // Permissive check: run transfer and open gate only once target speed is reached
             if (shooter.isAtTargetSpeed()) {
-                // transfer.openShooterGate(); // DISABLED: Servo gate not ready
+                transfer.openShooterGate();
                 transfer.runTransfer();
             } else {
-                // transfer.closeShooterGate(); // DISABLED: Servo gate not ready
+                transfer.closeShooterGate();
                 transfer.stopTransfer();
             }
         } else {
-            // Shooting stopped - stop transfer unless Y (clear) is active
+            // Shooting stopped - close gate and stop transfer unless Y (clear) is active
+            transfer.closeShooterGate();
             if (gamepad1.y) {
                 transfer.reverseTransfer();
             } else {
-                // transfer.closeShooterGate(); // DISABLED: Servo gate not ready
                 transfer.stopTransfer();
             }
 
@@ -200,7 +200,7 @@ public class BiobuzzTeleOp extends OpMode {
 
         telemetry.addData("--- TRANSFER (READY) ---", "");
         telemetry.addData("Transfer Power", "%.2f", transfer.getTransferPower());
-        telemetry.addData("Shooter Gate", "DISABLED (Under Construction)");
+        telemetry.addData("Shooter Gate", transfer.isShooterGateOpen() ? "OPEN (0.8)" : "CLOSED (1.0)");
 
         telemetry.addData("--- INTAKE (READY) ---", "");
         telemetry.addData("Intake Power", "%.2f", intake.getIntakePower());
@@ -217,7 +217,7 @@ public class BiobuzzTeleOp extends OpMode {
         drivetrain.setMotorPowers(0, 0, 0, 0);
         intake.stopIntake();
         transfer.stopTransfer();
-        // transfer.closeShooterGate(); // Disabled
+        transfer.closeShooterGate();
         shooter.stopShooter();
     }
 }
