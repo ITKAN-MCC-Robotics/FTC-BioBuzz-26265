@@ -16,6 +16,26 @@ public class FieldCoordinates {
     public static final double FIELD_CENTER_Y = 0.0;
 
     // ---------------------------------------------------------
+    // Starting & Reset Position Coordinates (Audience Wall, 2nd Tile)
+    // Field width/height: 144" x 144" (-72" to +72" range).
+    // Audience wall is at Y = -72.0".
+    // Robot back against audience wall -> Center Y ≈ -63.0" (18" robot frame).
+    // Tile 2 X center (Red side)  = -36.0" (2nd tile from left wall).
+    // Tile 2 X center (Blue side) =  36.0" (2nd tile from right wall).
+    // Default heading facing forward towards the field = 90.0 degrees.
+    // ---------------------------------------------------------
+    public static final double RED_START_X = -36.0;
+    public static final double RED_START_Y = -63.0;
+    public static final double RED_START_HEADING = 90.0;
+
+    public static final double BLUE_START_X = 36.0;
+    public static final double BLUE_START_Y = -63.0;
+    public static final double BLUE_START_HEADING = 90.0;
+
+    // Tile 2 exact center coordinates (if not touching wall)
+    public static final double TILE_CENTER_Y = -60.0;
+
+    // ---------------------------------------------------------
     // Targeting Coordinates (BIOBUZZ HIVE & Elements)
     // ---------------------------------------------------------
     // The HIVE structures serve as primary shooting targets for the turret.

@@ -2,24 +2,26 @@ package org.firstinspires.ftc.teamcode.opmodes;
 
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.mechanisms.DriveTrainMechanism;
 import org.firstinspires.ftc.teamcode.mechanisms.IntakeMechanism;
+import org.firstinspires.ftc.teamcode.mechanisms.PinpointMechanism;
 import org.firstinspires.ftc.teamcode.mechanisms.PollenShooterMechanism;
 import org.firstinspires.ftc.teamcode.mechanisms.TransferMechanism;
 
 /**
  * Biobuzz TeleOp OpMode
  *
- * Currently active:
+ * Active Mechanisms:
  * - Mecanum Drivetrain
  * - Pollen Shooter Flywheel
- * - Transfer Motor
+ * - Transfer Motor & Shooter Servo Gate
  * - Intake Motor
- * - Shooter Servo Gate
+ * - GoBilda Pinpoint Odometry Computer (Field Localization)
  *
- * Disabled / Commented out (Under Construction):
+ * Disabled / Under Construction:
  * - Turret Aiming (no axon servo installed yet)
- * - Pinpoint Odometry (not ready)
  *
  * Controls:
  * - Left Stick Y: Drive forward/backward
@@ -31,12 +33,9 @@ import org.firstinspires.ftc.teamcode.mechanisms.TransferMechanism;
  * - Y Button: Clear transfer & intake (reverses transfer & intake motors)
  * - Right Trigger: Run intake motor & transfer motor (gate remains closed)
  * - Right Bumper: Reverse intake motor only (transfer stopped, gate closed)
- * - [DISABLED] Left Trigger: Engage autoaim sequence
- * - [DISABLED] Left Bumper: Reset turret position back to zero position
+ * - Back Button: Reset Pinpoint Odometry position & IMU to (0,0,0)
  * - D-Pad Up: Increase shooter flywheel speed (100 RPM)
  * - D-Pad Down: Decrease shooter flywheel speed (100 RPM)
- * - [DISABLED] D-Pad Right: Step adjust turret towards the right
- * - [DISABLED] D-Pad Left: Step adjust turret towards the left
  */
 @TeleOp(name = "Biobuzz TeleOp", group = "TeleOp")
 public class BiobuzzTeleOp extends OpMode {
@@ -46,16 +45,17 @@ public class BiobuzzTeleOp extends OpMode {
     private final PollenShooterMechanism shooter = new PollenShooterMechanism();
     private final TransferMechanism transfer = new TransferMechanism();
     private final IntakeMechanism intake = new IntakeMechanism();
+    private final PinpointMechanism pinpoint = new PinpointMechanism();
 
-    // Mechanisms under construction (disabled for initial testing)
+    // Mechanisms under construction
     // private final Autoaim autoaim = new Autoaim();
-    // private final GoBildaPinpointDriver pinpointOdom; // Pinpoint Odometry (not ready)
 
     // State tracking variables
     private boolean isShootingSequenceActive = false;
 
     // Previous button states for edge detection / debouncing
     private boolean prevX = false;
+    private boolean prevBack = false;
     private boolean prevLeftBumper = false;
     private boolean prevDpadUp = false;
     private boolean prevDpadDown = false;
@@ -64,44 +64,45 @@ public class BiobuzzTeleOp extends OpMode {
 
     @Override
     public void init() {
-        // Initialize ready mechanisms
+        // Initialize active mechanisms
         drivetrain.init(hardwareMap);
         transfer.init(hardwareMap);
         shooter.init(hardwareMap);
         intake.init(hardwareMap);
+        pinpoint.init(hardwareMap);
 
         // --- UNDER CONSTRUCTION: Disabled until hardware installed ---
         // autoaim.init(hardwareMap); // Turret / Axon servo not ready
-        // pinpointOdom = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint"); // Odometry not ready
 
         telemetry.addLine("Biobuzz TeleOp Initialized");
-        telemetry.addLine("Active: Drivetrain, Shooter, Transfer, Intake, Shooter Gate");
-        telemetry.addLine("Disabled: Turret, Pinpoint Odom");
+        telemetry.addLine("Active: Drivetrain, Shooter, Transfer, Intake, Shooter Gate, Pinpoint Odom");
+        telemetry.addLine("Disabled: Turret Autoaim");
     }
 
     @Override
     public void loop() {
-        // --- 1. Mecanum Drive Controls ---
+        // --- 1. Update Pinpoint Odometry ---
+        pinpoint.update();
+
+        // Reset Pinpoint Position & IMU if Back button pressed while stationary
+        boolean currentBack = gamepad1.back;
+        if (currentBack && !prevBack) {
+            pinpoint.resetPosAndIMU();
+        }
+        prevBack = currentBack;
+
+        // --- 2. Mecanum Drive Controls ---
         double drive  = -gamepad1.left_stick_y;
         double strafe =  gamepad1.left_stick_x;
         double rotate =  gamepad1.right_stick_x;
         drivetrain.drive(drive, strafe, rotate);
 
-        // --- 2. Button Edge Detection (X, D-pad Up/Down) ---
+        // --- 3. Button Edge Detection (X, D-pad Up/Down) ---
         boolean currentX = gamepad1.x;
         if (currentX && !prevX) {
             shooter.toggleFlywheel();
         }
         prevX = currentX;
-
-        // --- DISABLED: Turret Reset (Left Bumper) - Axon Servo not installed ---
-        /*
-        boolean currentLeftBumper = gamepad1.left_bumper;
-        if (currentLeftBumper && !prevLeftBumper) {
-            autoaim.resetPosition();
-        }
-        prevLeftBumper = currentLeftBumper;
-        */
 
         boolean currentDpadUp = gamepad1.dpad_up;
         if (currentDpadUp && !prevDpadUp) {
@@ -115,29 +116,14 @@ public class BiobuzzTeleOp extends OpMode {
         }
         prevDpadDown = currentDpadDown;
 
-        // --- DISABLED: Turret Adjust (D-pad Right / Left) - Axon Servo not installed ---
-        /*
-        boolean currentDpadRight = gamepad1.dpad_right;
-        if (currentDpadRight && !prevDpadRight) {
-            autoaim.adjustRight();
-        }
-        prevDpadRight = currentDpadRight;
-
-        boolean currentDpadLeft = gamepad1.dpad_left;
-        if (currentDpadLeft && !prevDpadLeft) {
-            autoaim.adjustLeft();
-        }
-        prevDpadLeft = currentDpadLeft;
-        */
-
-        // --- 3. Shooting Sequence Controls (A / B Buttons) ---
+        // --- 4. Shooting Sequence Controls (A / B Buttons) ---
         if (gamepad1.a) {
             isShootingSequenceActive = true;
         } else if (gamepad1.b) {
             isShootingSequenceActive = false;
         }
 
-        // --- 4. Pollen Transfer & Shooter Execution ---
+        // --- 5. Pollen Transfer & Shooter Execution ---
         if (isShootingSequenceActive) {
             shooter.runShooter();
             // Permissive check: run transfer and open gate only once target speed is reached
@@ -171,7 +157,7 @@ public class BiobuzzTeleOp extends OpMode {
             }
         }
 
-        // --- 5. Intake Controls (Y Button, Right Trigger, Right Bumper) ---
+        // --- 6. Intake Controls (Y Button, Right Trigger, Right Bumper) ---
         if (gamepad1.y) {
             // Y button: clear transfer and intake by reversing both motors
             intake.reverseIntake();
@@ -183,25 +169,20 @@ public class BiobuzzTeleOp extends OpMode {
             intake.stopIntake();
         }
 
-        // --- 6. Autoaim & Turret Controls --- DISABLED: Axon Servo not installed
-        /*
-        boolean engageAutoaim = gamepad1.left_trigger > 0.1;
-        autoaim.update(engageAutoaim);
-        */
+        // --- 7. Telemetry ---
+        telemetry.addData("--- PINPOINT ODOMETRY ---", pinpoint.isInitialized() ? "OK" : "ERROR");
+        telemetry.addData("Status", pinpoint.getDeviceStatus());
+        telemetry.addData("FTC Pos (X, Y in)", "X: %.2f, Y: %.2f", pinpoint.getX(DistanceUnit.INCH), pinpoint.getY(DistanceUnit.INCH));
+        telemetry.addData("Heading (Deg)", "%.1f°", pinpoint.getHeading(AngleUnit.DEGREES));
+        telemetry.addData("Pedro Pos (X, Y)", "X: %.2f, Y: %.2f", pinpoint.getPedroX(), pinpoint.getPedroY());
+        telemetry.addData("Target Angle (Red)", "%.1f°", Math.toDegrees(pinpoint.getAngleToRedTarget()));
+        telemetry.addData("Target Angle (Blue)", "%.1f°", Math.toDegrees(pinpoint.getAngleToBlueTarget()));
 
-        // --- 7. Pinpoint Odometry Update --- DISABLED: Odometry not ready
-        /*
-        pinpointOdom.update();
-        */
-
-        // --- 8. Telemetry ---
         telemetry.addData("--- SHOOTER (READY) ---", "");
         telemetry.addData("Shooting Sequence", isShootingSequenceActive ? "ACTIVE" : "STOPPED");
         telemetry.addData("Flywheel Toggle", shooter.isFlywheelOn() ? "ON" : "OFF");
         telemetry.addData("Target RPM", "%.0f RPM", shooter.getTargetRpm());
         telemetry.addData("Actual RPM", "%.0f RPM", shooter.getCurrentRpm());
-        telemetry.addData("Actual Velocity", "%.1f ticks/sec", shooter.getVelocityTicksPerSec());
-        telemetry.addData("Encoder Pos", shooter.getEncoderPosition());
         telemetry.addData("Speed Permissive", shooter.isAtTargetSpeed() ? "READY" : "WAITING");
 
         telemetry.addData("--- TRANSFER (READY) ---", "");
@@ -212,7 +193,6 @@ public class BiobuzzTeleOp extends OpMode {
         telemetry.addData("Intake Power", "%.2f", intake.getIntakePower());
 
         telemetry.addData("--- TURRET / AUTOAIM ---", "DISABLED (No Axon Servo)");
-        telemetry.addData("--- PINPOINT ODOMETRY ---", "DISABLED (Under Construction)");
 
         telemetry.addData("--- DRIVETRAIN (READY) ---", "");
         telemetry.addData("Drive Inputs", "D: %.2f, S: %.2f, R: %.2f", drive, strafe, rotate);
