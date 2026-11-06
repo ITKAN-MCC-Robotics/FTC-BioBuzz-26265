@@ -10,7 +10,7 @@ import com.qualcomm.robotcore.hardware.Servo;
  * Controls the motor "transferMotor" and servo "shooterPgate".
  */
 public class TransferMechanism {
-    public static final double DEFAULT_TRANSFER_POWER = 1.0;
+    public static final double DEFAULT_TRANSFER_POWER = 0.8;
     public static final double GATE_OPEN_POS = 0.53;
     public static final double GATE_CLOSED_POS = 0.66;
 
@@ -24,7 +24,7 @@ public class TransferMechanism {
      */
     public void init(HardwareMap hwMap) {
         // Try hardware lookup for transfer motor with fallbacks
-        transferMotor = getHardwareWithFallback(hwMap, DcMotor.class, "transferMotor", "transfer", "motor1");
+        transferMotor = getHardwareWithFallback(hwMap, DcMotor.class, "transferMotor");
         if (transferMotor != null) {
             transferMotor.setDirection(DcMotorSimple.Direction.FORWARD);
             transferMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -32,7 +32,7 @@ public class TransferMechanism {
         }
 
         // Try hardware lookup for shooter gate servo with fallbacks
-        shooterPgate = getHardwareWithFallback(hwMap, Servo.class, "shooterPgate", "shooterGate", "gate", "shooterP_gate", "servo");
+        shooterPgate = getHardwareWithFallback(hwMap, Servo.class, "shooterPgate");
         if (shooterPgate != null) {
             closeShooterGate();
         }

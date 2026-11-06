@@ -54,6 +54,7 @@ public class BiobuzzTeleOp extends OpMode {
 
     // State tracking variables
     private boolean isShootingSequenceActive = false;
+    private boolean isManualGateOpen = false;
 
     // Previous button states for edge detection / debouncing
     private boolean prevX = false;
@@ -120,21 +121,23 @@ public class BiobuzzTeleOp extends OpMode {
 
         boolean currentDpadRight = gamepad1.dpad_right;
         if (currentDpadRight && !prevDpadRight) {
-            transfer.openShooterGate();
+            isManualGateOpen = true;
         }
         prevDpadRight = currentDpadRight;
 
         boolean currentDpadLeft = gamepad1.dpad_left;
         if (currentDpadLeft && !prevDpadLeft) {
-            transfer.closeShooterGate();
+            isManualGateOpen = false;
         }
         prevDpadLeft = currentDpadLeft;
 
         // --- 4. Shooting Sequence Controls (A / B Buttons) ---
         if (gamepad1.a) {
             isShootingSequenceActive = true;
+            isManualGateOpen = false;
         } else if (gamepad1.b) {
             isShootingSequenceActive = false;
+            isManualGateOpen = false;
         }
 
         // --- 5. Pollen Transfer & Shooter Execution ---
@@ -154,14 +157,20 @@ public class BiobuzzTeleOp extends OpMode {
                 transfer.openShooterGate();
                 transfer.reverseTransfer();
             } else if (gamepad1.right_trigger > 0.1) {
-                // Right Trigger (Intake): run transfer forward and open gate to feed elements into staging area
-                transfer.openShooterGate();
+                // Right Trigger (Intake): run transfer forward and keep gate closed (unless manually opened via D-pad Right)
+                if (isManualGateOpen || gamepad1.dpad_right) {
+                    transfer.openShooterGate();
+                } else {
+                    transfer.closeShooterGate();
+                }
                 transfer.runTransfer();
             } else {
                 // Right Bumper (Reverse Intake) or Idle: stop transfer motor
                 transfer.stopTransfer();
-                // Close gate if not manually held open via D-pad
-                if (!currentDpadRight) {
+                // D-pad manual gate control: open gate if manual toggle or D-pad Right is active, otherwise close
+                if (isManualGateOpen || gamepad1.dpad_right) {
+                    transfer.openShooterGate();
+                } else {
                     transfer.closeShooterGate();
                 }
             }
