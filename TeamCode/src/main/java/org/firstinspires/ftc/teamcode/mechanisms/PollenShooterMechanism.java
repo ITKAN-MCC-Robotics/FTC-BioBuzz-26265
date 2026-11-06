@@ -26,22 +26,36 @@ public class PollenShooterMechanism {
      * @param hwMap The hardware map from the OpMode
      */
     public void init(HardwareMap hwMap) {
-        shooterP = hwMap.get(DcMotorEx.class, "shooterP");
+        // Hardware lookup with fallbacks for motor name
+        shooterP = getMotorWithFallback(hwMap, "shooterP", "shooter");
 
-        // Set direction for shooter launch
-        shooterP.setDirection(DcMotorSimple.Direction.REVERSE);
-        shooterP.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        shooterP.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        if (shooterP != null) {
+            // Set direction for shooter launch
+            shooterP.setDirection(DcMotorSimple.Direction.REVERSE);
+            shooterP.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            shooterP.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
-        // Configure PIDF feedforward & proportional gain for closed-loop velocity control
-        // Max Ticks/Sec = (6000 RPM * 28 TPR) / 60 = 2800 ticks/sec
-        double maxTicksPerSecond = (MAX_RPM * TICKS_PER_REV) / 60.0;
-        double f = 32767.0 / maxTicksPerSecond; // Feedforward F ≈ 11.7
-        double p = 10.0;
-        double i = 1.0;
-        double d = 0.0;
+            // Configure PIDF feedforward & proportional gain for closed-loop velocity control
+            // Max Ticks/Sec = (6000 RPM * 28 TPR) / 60 = 2800 ticks/sec
+            double maxTicksPerSecond = (MAX_RPM * TICKS_PER_REV) / 60.0;
+            double f = 32767.0 / maxTicksPerSecond; // Feedforward F ≈ 11.7
+            double p = 10.0;
+            double i = 1.0;
+            double d = 0.0;
 
-        shooterP.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, new PIDFCoefficients(p, i, d, f));
+            shooterP.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, new PIDFCoefficients(p, i, d, f));
+        }
+    }
+
+    private DcMotorEx getMotorWithFallback(HardwareMap hwMap, String... names) {
+        for (String name : names) {
+            try {
+                DcMotorEx m = hwMap.get(DcMotorEx.class, name);
+                if (m != null) return m;
+            } catch (Exception ignored) {
+            }
+        }
+        return null;
     }
 
     /**
@@ -154,12 +168,12 @@ public class PollenShooterMechanism {
     }
 
     /**
-     * Checks if actual RPM is within speed permissive tolerance or at least 80% of target speed.
-     * @return true if speed setpoint reached
+     * Checks if actual RPM is within speed permissive tolerance or at least 75% of target speed.
+     * @return true if speed setpoint reached or shooter hardware disabled
      */
     public boolean isAtTargetSpeed() {
-        if (targetRpm <= 0) return true;
+        if (shooterP == null || targetRpm <= 0) return true;
         double currentRpm = getCurrentRpm();
-        return Math.abs(currentRpm - targetRpm) <= RPM_TOLERANCE || currentRpm >= (targetRpm * 0.80);
+        return Math.abs(currentRpm - targetRpm) <= RPM_TOLERANCE || currentRpm >= (targetRpm * 0.75);
     }
 }

@@ -29,13 +29,15 @@ import org.firstinspires.ftc.teamcode.mechanisms.TransferMechanism;
  * - Right Stick X: Rotate
  * - A Button: Start shooting sequence (spins flywheel, opens gate & runs transfer motor when target speed reached)
  * - B Button: Stop shooting sequence (closes gate & stops transfer motor)
- * - X Button: Toggle flywheel on/off (default 2800 RPM)
- * - Y Button: Clear transfer & intake (reverses transfer & intake motors)
- * - Right Trigger: Run intake motor & transfer motor (gate remains closed)
+ * - X Button: Toggle flywheel on/off (default 4600 RPM)
+ * - Y Button: Clear transfer & intake (reverses transfer & intake motors, opens gate)
+ * - Right Trigger: Run intake motor & transfer motor (opens gate to feed pollen into staging/shooter)
  * - Right Bumper: Reverse intake motor only (transfer stopped, gate closed)
  * - Back Button: Reset Pinpoint Odometry position & IMU to (0,0,0)
  * - D-Pad Up: Increase shooter flywheel speed (100 RPM)
  * - D-Pad Down: Decrease shooter flywheel speed (100 RPM)
+ * - D-Pad Right: Manually open shooter gate
+ * - D-Pad Left: Manually close shooter gate
  */
 @TeleOp(name = "Biobuzz TeleOp", group = "TeleOp")
 public class BiobuzzTeleOp extends OpMode {
@@ -97,7 +99,7 @@ public class BiobuzzTeleOp extends OpMode {
         double rotate =  gamepad1.right_stick_x;
         drivetrain.drive(drive, strafe, rotate);
 
-        // --- 3. Button Edge Detection (X, D-pad Up/Down) ---
+        // --- 3. Button Edge Detection (X, D-pad Up/Down/Left/Right) ---
         boolean currentX = gamepad1.x;
         if (currentX && !prevX) {
             shooter.toggleFlywheel();
@@ -115,6 +117,18 @@ public class BiobuzzTeleOp extends OpMode {
             shooter.adjustRpm(-100.0);
         }
         prevDpadDown = currentDpadDown;
+
+        boolean currentDpadRight = gamepad1.dpad_right;
+        if (currentDpadRight && !prevDpadRight) {
+            transfer.openShooterGate();
+        }
+        prevDpadRight = currentDpadRight;
+
+        boolean currentDpadLeft = gamepad1.dpad_left;
+        if (currentDpadLeft && !prevDpadLeft) {
+            transfer.closeShooterGate();
+        }
+        prevDpadLeft = currentDpadLeft;
 
         // --- 4. Shooting Sequence Controls (A / B Buttons) ---
         if (gamepad1.a) {
@@ -135,18 +149,21 @@ public class BiobuzzTeleOp extends OpMode {
                 transfer.stopTransfer();
             }
         } else {
-            // Shooting stopped - keep gate closed
-            transfer.closeShooterGate();
-
             if (gamepad1.y) {
-                // Y button: clear transfer & intake jam by reversing transfer motor
+                // Y button: clear transfer & intake jam by reversing transfer motor and opening gate
+                transfer.openShooterGate();
                 transfer.reverseTransfer();
             } else if (gamepad1.right_trigger > 0.1) {
-                // Right Trigger (Intake): run transfer forward to feed elements into staging area
+                // Right Trigger (Intake): run transfer forward and open gate to feed elements into staging area
+                transfer.openShooterGate();
                 transfer.runTransfer();
             } else {
-                // Right Bumper (Reverse Intake) or Idle: stop transfer motor to keep staged elements inside
+                // Right Bumper (Reverse Intake) or Idle: stop transfer motor
                 transfer.stopTransfer();
+                // Close gate if not manually held open via D-pad
+                if (!currentDpadRight) {
+                    transfer.closeShooterGate();
+                }
             }
 
             // Run flywheel if toggled ON manually via X button, otherwise stop
@@ -185,9 +202,10 @@ public class BiobuzzTeleOp extends OpMode {
         telemetry.addData("Actual RPM", "%.0f RPM", shooter.getCurrentRpm());
         telemetry.addData("Speed Permissive", shooter.isAtTargetSpeed() ? "READY" : "WAITING");
 
-        telemetry.addData("--- TRANSFER (READY) ---", "");
+        telemetry.addData("--- TRANSFER ---", transfer.isServoAttached() ? "SERVO READY" : "SERVO UNCONFIGURED / NULL");
         telemetry.addData("Transfer Power", "%.2f", transfer.getTransferPower());
-        telemetry.addData("Shooter Gate", transfer.isShooterGateOpen() ? "OPEN (0.8)" : "CLOSED (1.0)");
+        telemetry.addData("Shooter Gate State", transfer.isShooterGateOpen() ? "OPEN" : "CLOSED");
+        telemetry.addData("Gate Servo Position", "%.3f", transfer.getShooterGatePosition());
 
         telemetry.addData("--- INTAKE (READY) ---", "");
         telemetry.addData("Intake Power", "%.2f", intake.getIntakePower());

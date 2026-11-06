@@ -7,15 +7,15 @@ import com.qualcomm.robotcore.hardware.Servo;
 
 /**
  * Transfer Mechanism for Biobuzz robot.
- * Controls the motor "Transfer" and servo "Shooter1Gate".
+ * Controls the motor "transferMotor" and servo "shooterPgate".
  */
 public class TransferMechanism {
     public static final double DEFAULT_TRANSFER_POWER = 1.0;
-    public static final double GATE_OPEN_POS = 0.8;
-    public static final double GATE_CLOSED_POS = 1.0;
+    public static final double GATE_OPEN_POS = 0.53;
+    public static final double GATE_CLOSED_POS = 0.66;
 
     private DcMotor transferMotor;
-    private Servo shooter1Gate;
+    private Servo shooterPgate;
     private boolean gateOpen = false;
 
     /**
@@ -23,19 +23,35 @@ public class TransferMechanism {
      * @param hwMap HardwareMap from OpMode
      */
     public void init(HardwareMap hwMap) {
-        transferMotor = hwMap.get(DcMotor.class, "transferMotor");
-        
-        try {
-            shooter1Gate = hwMap.get(Servo.class, "Shooter1Gate");
-            closeShooterGate();
-        } catch (Exception e) {
-            // Servo gate not installed / configured yet
-            shooter1Gate = null;
+        // Try hardware lookup for transfer motor with fallbacks
+        transferMotor = getHardwareWithFallback(hwMap, DcMotor.class, "transferMotor", "transfer", "motor1");
+        if (transferMotor != null) {
+            transferMotor.setDirection(DcMotorSimple.Direction.FORWARD);
+            transferMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            transferMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         }
 
-        transferMotor.setDirection(DcMotorSimple.Direction.FORWARD);
-        transferMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        transferMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        // Try hardware lookup for shooter gate servo with fallbacks
+        shooterPgate = getHardwareWithFallback(hwMap, Servo.class, "shooterPgate", "shooterGate", "gate", "shooterP_gate", "servo");
+        if (shooterPgate != null) {
+            closeShooterGate();
+        }
+    }
+
+    /**
+     * Helper to retrieve hardware with fallback device names.
+     */
+    private <T> T getHardwareWithFallback(HardwareMap hwMap, Class<T> classOrInterface, String... names) {
+        for (String name : names) {
+            try {
+                T device = hwMap.get(classOrInterface, name);
+                if (device != null) {
+                    return device;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return null;
     }
 
     /**
@@ -90,8 +106,8 @@ public class TransferMechanism {
      * @param position Servo position (0.0 to 1.0)
      */
     public void setShooterGatePosition(double position) {
-        if (shooter1Gate != null) {
-            shooter1Gate.setPosition(position);
+        if (shooterPgate != null) {
+            shooterPgate.setPosition(position);
         }
     }
 
@@ -101,6 +117,14 @@ public class TransferMechanism {
      */
     public boolean isShooterGateOpen() {
         return gateOpen;
+    }
+
+    /**
+     * Checks if the shooter gate servo hardware is initialized.
+     * @return true if servo is non-null
+     */
+    public boolean isServoAttached() {
+        return shooterPgate != null;
     }
 
     /**
@@ -116,6 +140,6 @@ public class TransferMechanism {
      * @return current position
      */
     public double getShooterGatePosition() {
-        return shooter1Gate != null ? shooter1Gate.getPosition() : 0.0;
+        return shooterPgate != null ? shooterPgate.getPosition() : 0.0;
     }
 }
