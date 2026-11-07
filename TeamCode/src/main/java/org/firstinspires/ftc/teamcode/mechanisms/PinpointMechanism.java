@@ -18,11 +18,13 @@ public class PinpointMechanism {
     private GoBildaPinpointDriver pinpoint;
     private boolean isInitialized = false;
 
-    // Default pod offsets (in millimeters) - update per robot hardware setup
-    // X pod offset: sideways distance from center to X (forward) pod (left = positive)
-    // Y pod offset: forward distance from center to Y (strafe) pod (forward = positive)
-    private double xPodOffsetMm = 0.0;
-    private double yPodOffsetMm = 0.0;
+    // Pod offsets (in millimeters) relative to the physical center of the robot
+    // Robot dimensions: 18"x18" (457.2mm x 457.2mm), center is 228.6mm from back.
+    // IMU location: centered width-wise (0mm), 130mm from back (-98.6mm from robot center).
+    // X-pod (Forward pod): 60mm left of IMU -> +60.0 mm from robot center
+    // Y-pod (Strafe pod): 20mm in front of IMU -> -98.6mm + 20mm = -78.6 mm from robot center
+    private double xPodOffsetMm = 60.0;
+    private double yPodOffsetMm = -78.6;
 
     /**
      * Initializes the Pinpoint Odometry Computer with default device name "pinpoint".

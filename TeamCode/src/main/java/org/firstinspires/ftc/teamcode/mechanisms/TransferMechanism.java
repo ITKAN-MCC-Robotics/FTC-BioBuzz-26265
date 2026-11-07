@@ -1,30 +1,44 @@
 package org.firstinspires.ftc.teamcode.mechanisms;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 
 /**
  * Transfer Mechanism for Biobuzz robot.
  * Controls the motor "transferMotor" and servo "shooterPgate".
+ * Includes current-based stall detection to prevent motor burnout and handle jams.
  */
 public class TransferMechanism {
     public static final double DEFAULT_TRANSFER_POWER = 0.8;
     public static final double GATE_OPEN_POS = 0.53;
     public static final double GATE_CLOSED_POS = 0.66;
 
-    private DcMotor transferMotor;
+    // Stall detection settings
+    public static final double STALL_CURRENT_THRESHOLD_AMPS = 5; // Current threshold in Amps
+    public static final long STALL_DURATION_MS = 250;              // Filter duration in ms to prevent false positives from inrush current
+
+    private DcMotorEx transferMotor;
     private Servo shooterPgate;
     private boolean gateOpen = false;
+
+    // Stall detection state
+    private boolean isStalled = false;
+    private long stallStartTimeMs = 0;
 
     /**
      * Initializes hardware for transfer motor and shooter gate servo.
      * @param hwMap HardwareMap from OpMode
      */
     public void init(HardwareMap hwMap) {
-        // Try hardware lookup for transfer motor with fallbacks
-        transferMotor = getHardwareWithFallback(hwMap, DcMotor.class, "transferMotor");
+        // Reset stall state on init
+        resetStall();
+
+        // Try hardware lookup for transfer motor with fallbacks (using DcMotorEx for current monitoring)
+        transferMotor = getHardwareWithFallback(hwMap, DcMotorEx.class, "transferMotor");
         if (transferMotor != null) {
             transferMotor.setDirection(DcMotorSimple.Direction.FORWARD);
             transferMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -55,13 +69,85 @@ public class TransferMechanism {
     }
 
     /**
+     * Periodically monitors motor current draw and updates stall state.
+     * Should be called in the OpMode loop.
+     */
+    public void update() {
+        if (transferMotor == null) return;
+
+        double currentAmps = getMotorCurrent();
+
+        // Monitor stall condition only when attempting to run motor forward
+        if (!isStalled && transferMotor.getPower() > 0.0) {
+            if (currentAmps >= STALL_CURRENT_THRESHOLD_AMPS) {
+                if (stallStartTimeMs == 0) {
+                    stallStartTimeMs = System.currentTimeMillis();
+                } else if (System.currentTimeMillis() - stallStartTimeMs >= STALL_DURATION_MS) {
+                    // Sustained high current draw indicates mechanical stall
+                    isStalled = true;
+                    transferMotor.setPower(0.0);
+                }
+            } else {
+                stallStartTimeMs = 0;
+            }
+        } else if (transferMotor.getPower() == 0.0 && !isStalled) {
+            stallStartTimeMs = 0;
+        }
+    }
+
+    /**
      * Sets explicit transfer motor power.
+     * Blocked if the motor is currently stalled and attempting to run forward.
+     * Reversing the motor automatically clears the stall condition.
      * @param power Power level (-1.0 to 1.0)
      */
     public void setTransferPower(double power) {
+        // Reversing motor clears stall state
+        if (power < 0.0) {
+            resetStall();
+        }
+
+        // Block forward motor operation while stalled
+        if (isStalled && power > 0.0) {
+            if (transferMotor != null) {
+                transferMotor.setPower(0.0);
+            }
+            return;
+        }
+
         if (transferMotor != null) {
             transferMotor.setPower(power);
         }
+    }
+
+    /**
+     * Resets the stall flag and timer, allowing the motor to run forward again.
+     */
+    public void resetStall() {
+        isStalled = false;
+        stallStartTimeMs = 0;
+    }
+
+    /**
+     * Returns whether the transfer motor is currently in a stalled state.
+     * @return true if stalled
+     */
+    public boolean isStalled() {
+        return isStalled;
+    }
+
+    /**
+     * Returns the live electrical current draw of the transfer motor in Amps.
+     * @return current draw in Amps, or 0.0 if motor is unavailable
+     */
+    public double getMotorCurrent() {
+        if (transferMotor != null) {
+            try {
+                return transferMotor.getCurrent(CurrentUnit.AMPS);
+            } catch (Exception ignored) {
+            }
+        }
+        return 0.0;
     }
 
     /**
@@ -143,3 +229,4 @@ public class TransferMechanism {
         return shooterPgate != null ? shooterPgate.getPosition() : 0.0;
     }
 }
+

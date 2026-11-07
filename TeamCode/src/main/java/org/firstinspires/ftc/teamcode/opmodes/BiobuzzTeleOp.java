@@ -42,6 +42,15 @@ import org.firstinspires.ftc.teamcode.mechanisms.TransferMechanism;
 @TeleOp(name = "Biobuzz TeleOp", group = "TeleOp")
 public class BiobuzzTeleOp extends OpMode {
 
+    /**
+     * Alliance selection enum for starting position and field targeting.
+     */
+    public enum Alliance {
+        RED,
+        BLUE,
+        UNSELECTED
+    }
+
     // Reference mechanisms
     private final DriveTrainMechanism drivetrain = new DriveTrainMechanism();
     private final PollenShooterMechanism shooter = new PollenShooterMechanism();
@@ -53,6 +62,7 @@ public class BiobuzzTeleOp extends OpMode {
     // private final Autoaim autoaim = new Autoaim();
 
     // State tracking variables
+    private Alliance selectedAlliance = Alliance.UNSELECTED;
     private boolean isShootingSequenceActive = false;
     private boolean isManualGateOpen = false;
 
@@ -77,9 +87,40 @@ public class BiobuzzTeleOp extends OpMode {
         // --- UNDER CONSTRUCTION: Disabled until hardware installed ---
         // autoaim.init(hardwareMap); // Turret / Axon servo not ready
 
-        telemetry.addLine("Biobuzz TeleOp Initialized");
+        telemetry.addLine("=== BIOBUZZ TELEOP INITIALIZED ===");
         telemetry.addLine("Active: Drivetrain, Shooter, Transfer, Intake, Shooter Gate, Pinpoint Odom");
         telemetry.addLine("Disabled: Turret Autoaim");
+        telemetry.addLine("");
+        telemetry.addLine("=== ALLIANCE SELECTION REQUIRED ===");
+        telemetry.addLine("Press [B] for RED Alliance  (Start: Tile 2, X: -36.0\", Y: -63.0\", 90°)");
+        telemetry.addLine("Press [X] for BLUE Alliance (Start: Tile 2, X:  36.0\", Y: -63.0\", 90°)");
+    }
+
+    @Override
+    public void init_loop() {
+        if (gamepad1.b) {
+            selectedAlliance = Alliance.RED;
+            pinpoint.resetToAudienceWallRed();
+        } else if (gamepad1.x) {
+            selectedAlliance = Alliance.BLUE;
+            pinpoint.resetToAudienceWallBlue();
+        }
+
+        telemetry.addLine("=== ALLIANCE SELECTION ===");
+        telemetry.addLine("Press [B] for RED Alliance | Press [X] for BLUE Alliance");
+        telemetry.addData("Selected Alliance", selectedAlliance == Alliance.UNSELECTED ? "NONE (Default: RED)" : selectedAlliance);
+        telemetry.addData("Starting Pose", "X: %.1f\", Y: %.1f\", Heading: %.1f°",
+                pinpoint.getX(DistanceUnit.INCH), pinpoint.getY(DistanceUnit.INCH), pinpoint.getHeading(AngleUnit.DEGREES));
+        telemetry.update();
+    }
+
+    @Override
+    public void start() {
+        // Fallback: If no alliance selected during init_loop, default to RED alliance
+        if (selectedAlliance == Alliance.UNSELECTED) {
+            selectedAlliance = Alliance.RED;
+            pinpoint.resetToAudienceWallRed();
+        }
     }
 
     @Override
@@ -87,10 +128,14 @@ public class BiobuzzTeleOp extends OpMode {
         // --- 1. Update Pinpoint Odometry ---
         pinpoint.update();
 
-        // Reset Pinpoint Position & IMU if Back button pressed while stationary
+        // Reset Pinpoint Position & IMU to selected alliance starting position if Back button pressed while stationary
         boolean currentBack = gamepad1.back;
         if (currentBack && !prevBack) {
-            pinpoint.resetPosAndIMU();
+            if (selectedAlliance == Alliance.BLUE) {
+                pinpoint.resetToAudienceWallBlue();
+            } else {
+                pinpoint.resetToAudienceWallRed();
+            }
         }
         prevBack = currentBack;
 
@@ -133,6 +178,10 @@ public class BiobuzzTeleOp extends OpMode {
 
         // --- 4. Shooting Sequence Controls (A / B Buttons) ---
         if (gamepad1.a) {
+            if (!isShootingSequenceActive) {
+                // Clear any transfer stall state when starting shooting sequence
+                transfer.resetStall();
+            }
             isShootingSequenceActive = true;
             isManualGateOpen = false;
         } else if (gamepad1.b) {
@@ -154,6 +203,7 @@ public class BiobuzzTeleOp extends OpMode {
         } else {
             if (gamepad1.y) {
                 // Y button: clear transfer & intake jam by reversing transfer motor and opening gate
+                transfer.resetStall();
                 transfer.openShooterGate();
                 transfer.reverseTransfer();
             } else if (gamepad1.right_trigger > 0.1) {
@@ -195,12 +245,17 @@ public class BiobuzzTeleOp extends OpMode {
             intake.stopIntake();
         }
 
+        // --- Update Transfer Stall Detection ---
+        transfer.update();
+
         // --- 7. Telemetry ---
+        telemetry.addData("--- ALLIANCE ---", selectedAlliance);
         telemetry.addData("--- PINPOINT ODOMETRY ---", pinpoint.isInitialized() ? "OK" : "ERROR");
         telemetry.addData("Status", pinpoint.getDeviceStatus());
         telemetry.addData("FTC Pos (X, Y in)", "X: %.2f, Y: %.2f", pinpoint.getX(DistanceUnit.INCH), pinpoint.getY(DistanceUnit.INCH));
         telemetry.addData("Heading (Deg)", "%.1f°", pinpoint.getHeading(AngleUnit.DEGREES));
         telemetry.addData("Pedro Pos (X, Y)", "X: %.2f, Y: %.2f", pinpoint.getPedroX(), pinpoint.getPedroY());
+        telemetry.addData("Active Target Angle", "%.1f°", Math.toDegrees(selectedAlliance == Alliance.BLUE ? pinpoint.getAngleToBlueTarget() : pinpoint.getAngleToRedTarget()));
         telemetry.addData("Target Angle (Red)", "%.1f°", Math.toDegrees(pinpoint.getAngleToRedTarget()));
         telemetry.addData("Target Angle (Blue)", "%.1f°", Math.toDegrees(pinpoint.getAngleToBlueTarget()));
 
@@ -213,6 +268,8 @@ public class BiobuzzTeleOp extends OpMode {
 
         telemetry.addData("--- TRANSFER ---", transfer.isServoAttached() ? "SERVO READY" : "SERVO UNCONFIGURED / NULL");
         telemetry.addData("Transfer Power", "%.2f", transfer.getTransferPower());
+        telemetry.addData("Transfer Current", "%.2f A", transfer.getMotorCurrent());
+        telemetry.addData("Transfer Stall State", transfer.isStalled() ? "STALLED" : "NORMAL");
         telemetry.addData("Shooter Gate State", transfer.isShooterGateOpen() ? "OPEN" : "CLOSED");
         telemetry.addData("Gate Servo Position", "%.3f", transfer.getShooterGatePosition());
 
