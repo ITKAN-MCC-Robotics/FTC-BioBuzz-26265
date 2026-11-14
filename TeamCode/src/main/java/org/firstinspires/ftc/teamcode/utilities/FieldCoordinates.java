@@ -1,95 +1,145 @@
 package org.firstinspires.ftc.teamcode.utilities;
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+
 /**
  * Field coordinate definitions and conversion utilities for the BIOBUZZ season.
- * Defines FTC standard coordinates, converts to Pedro Pathing coordinates,
+ * Defines Pedro Pathing and FTC standard coordinates, converts between coordinate systems,
  * and maintains target coordinates for turret tracking.
  */
 public class FieldCoordinates {
 
     // ---------------------------------------------------------
-    // FTC Standard Coordinate System
-    // Center of the field is (0,0). X is horizontal (parallel to audience).
-    // Y is vertical (moving away from audience). Units are in inches.
+    // Pedro Pathing Starting & Reset Position Coordinates
+    // Field dimensions: 141.5" x 141.5" (Origin 0,0 at bottom-left corner)
     // ---------------------------------------------------------
-    public static final double FIELD_CENTER_X = 0.0;
-    public static final double FIELD_CENTER_Y = 0.0;
+    // Red Alliance Start: Middle of 2nd tile by audience wall
+    public static final double PEDRO_RED_START_X = 36.0;
+    public static final double PEDRO_RED_START_Y = 9.0;
+    public static final double PEDRO_RED_START_HEADING = 90.0; // Facing Up (+Y)
+
+    // Blue Alliance Start: Middle of 2nd tile by opposite wall
+    public static final double PEDRO_BLUE_START_X = 106.0;
+    public static final double PEDRO_BLUE_START_Y = 132.0;
+    public static final double PEDRO_BLUE_START_HEADING = 270.0; // Facing Down (-Y)
+
+    // FTC Standard equivalents (Center at 0,0)
+    public static final double FTC_RED_START_X = 63.0;
+    public static final double FTC_RED_START_Y = -36.0;
+    public static final double FTC_RED_START_HEADING = 180.0;
+
+    public static final double FTC_BLUE_START_X = -60.0;
+    public static final double FTC_BLUE_START_Y = 34.0;
+    public static final double FTC_BLUE_START_HEADING = 0.0;
+
+    // Field Y divider threshold (middle of field in Pedro coordinates)
+    public static final double FIELD_MID_Y_PEDRO = 70.75;
 
     // ---------------------------------------------------------
-    // Starting & Reset Position Coordinates (Audience Wall, 2nd Tile)
-    // Field width/height: 144" x 144" (-72" to +72" range).
-    // Audience wall is at Y = -72.0".
-    // Robot back against audience wall -> Center Y ≈ -63.0" (18" robot frame).
-    // Tile 2 X center (Red side)  = -36.0" (2nd tile from left wall).
-    // Tile 2 X center (Blue side) =  36.0" (2nd tile from right wall).
-    // Default heading facing forward towards the field = 90.0 degrees.
+    // Targeting Coordinates (BIOBUZZ HIVE Goals in Pedro Pathing Coordinates)
     // ---------------------------------------------------------
-    public static final double RED_START_X = -36.0;
-    public static final double RED_START_Y = -63.0;
-    public static final double RED_START_HEADING = 90.0;
+    // At Y < 70.75 (Lower / Audience half of field)
+    public static final double PEDRO_RED_HIVE_LOWER_X = 70.75;
+    public static final double PEDRO_RED_HIVE_LOWER_Y = 60.0;
 
-    public static final double BLUE_START_X = 36.0;
-    public static final double BLUE_START_Y = -63.0;
-    public static final double BLUE_START_HEADING = 90.0;
+    public static final double PEDRO_BLUE_HIVE_LOWER_X = 95.0;
+    public static final double PEDRO_BLUE_HIVE_LOWER_Y = 60.0;
 
-    // Tile 2 exact center coordinates (if not touching wall)
-    public static final double TILE_CENTER_Y = -60.0;
+    // At Y >= 70.75 (Upper / Back half of field)
+    public static final double PEDRO_RED_HIVE_UPPER_X = 70.75;
+    public static final double PEDRO_RED_HIVE_UPPER_Y = 84.0;
 
-    // ---------------------------------------------------------
-    // Targeting Coordinates (BIOBUZZ HIVE & Elements)
-    // ---------------------------------------------------------
-    // The HIVE structures serve as primary shooting targets for the turret.
-    // Red Alliance HIVE target center (approximate based on standard layout)
-    public static final double RED_HIVE_TARGET_X = -36.0; 
-    public static final double RED_HIVE_TARGET_Y = 72.0;
+    public static final double PEDRO_BLUE_HIVE_UPPER_X = 95.0;
+    public static final double PEDRO_BLUE_HIVE_UPPER_Y = 84.0;
 
-    // Blue Alliance HIVE target center (approximate based on standard layout)
-    public static final double BLUE_HIVE_TARGET_X = 36.0;
-    public static final double BLUE_HIVE_TARGET_Y = 72.0;
+    /**
+     * Gets the active target goal coordinates (X, Y) in Pedro Pathing coordinates based on
+     * alliance and current robot Y position.
+     *
+     * @param isBlueAlliance true for Blue Alliance, false for Red Alliance
+     * @param robotPedroY Current robot Y position in Pedro Pathing coordinates (inches)
+     * @return double array containing [targetPedroX, targetPedroY]
+     */
+    public static double[] getTargetCoordinatesPedro(boolean isBlueAlliance, double robotPedroY) {
+        if (robotPedroY < FIELD_MID_Y_PEDRO) {
+            // Lower field (Y < 70.75)
+            if (isBlueAlliance) {
+                return new double[]{PEDRO_BLUE_HIVE_LOWER_X, PEDRO_BLUE_HIVE_LOWER_Y};
+            } else {
+                return new double[]{PEDRO_RED_HIVE_LOWER_X, PEDRO_RED_HIVE_LOWER_Y};
+            }
+        } else {
+            // Upper field (Y >= 70.75)
+            if (isBlueAlliance) {
+                return new double[]{PEDRO_BLUE_HIVE_UPPER_X, PEDRO_BLUE_HIVE_UPPER_Y};
+            } else {
+                return new double[]{PEDRO_RED_HIVE_UPPER_X, PEDRO_RED_HIVE_UPPER_Y};
+            }
+        }
+    }
 
     /**
      * Converts an FTC Standard X coordinate to a Pedro Pathing X coordinate.
-     * Pedro Pathing sets (0,0) at the bottom corner, where X typically represents 
-     * the forward/backward (vertical) axis relative to the starting wall.
-     * 
-     * @param ftcX The standard FTC X coordinate (inches).
-     * @param ftcY The standard FTC Y coordinate (inches).
-     * @return The Pedro Pathing X coordinate (inches).
+     * Per Pedro Pathing specification: Pedro X = FTC Y + 72.
      */
     public static double ftcToPedroX(double ftcX, double ftcY) {
-        // In Pedro Pathing, X is the vertical axis extending from the alliance wall.
         return ftcY + 72.0;
     }
 
     /**
      * Converts an FTC Standard Y coordinate to a Pedro Pathing Y coordinate.
-     * Pedro Pathing sets (0,0) at the bottom corner, where Y typically represents 
-     * the left/right (horizontal) axis.
-     * 
-     * @param ftcX The standard FTC X coordinate (inches).
-     * @param ftcY The standard FTC Y coordinate (inches).
-     * @return The Pedro Pathing Y coordinate (inches).
+     * Per Pedro Pathing specification: Pedro Y = 72 - FTC X.
      */
     public static double ftcToPedroY(double ftcX, double ftcY) {
-        // In Pedro Pathing, Y is the horizontal axis. 
-        // Adding 72 shifts the standard (-72 to 72) range to (0 to 144).
-        return ftcX + 72.0;
+        return 72.0 - ftcX;
     }
 
     /**
-     * Calculates the required turret angle to face a target point on the field.
-     * 
-     * @param robotX Current robot X position in FTC standard coordinates.
-     * @param robotY Current robot Y position in FTC standard coordinates.
-     * @param targetX Target X position in FTC standard coordinates.
-     * @param targetY Target Y position in FTC standard coordinates.
-     * @return The angle in radians for the turret to aim at the target.
+     * Converts an FTC Standard Heading (radians) to Pedro Pathing Heading (radians).
+     * Per Pedro Pathing specification: Pedro Heading = FTC Heading - PI / 2.
+     */
+    public static double ftcToPedroHeading(double ftcHeadingRad) {
+        return ftcHeadingRad - (Math.PI / 2.0);
+    }
+
+    /**
+     * Converts a Pedro Pathing X coordinate to an FTC Standard X coordinate.
+     */
+    public static double pedroToFtcX(double pedroX, double pedroY) {
+        return 72.0 - pedroY;
+    }
+
+    /**
+     * Converts a Pedro Pathing Y coordinate to an FTC Standard Y coordinate.
+     */
+    public static double pedroToFtcY(double pedroX, double pedroY) {
+        return pedroX - 72.0;
+    }
+
+    /**
+     * Converts a Pedro Pathing Heading (degrees) to FTC Standard Heading (degrees).
+     */
+    public static double pedroToFtcHeading(double pedroHeadingDeg) {
+        return AngleUnit.normalizeDegrees(pedroHeadingDeg + 90.0);
+    }
+
+    /**
+     * Calculates the absolute field angle in radians to face a target point from the robot's position.
+     * Works identically in both FTC and Pedro coordinate systems.
      */
     public static double calculateTurretAngle(double robotX, double robotY, double targetX, double targetY) {
         double deltaX = targetX - robotX;
         double deltaY = targetY - robotY;
-        
-        // Math.atan2 returns the angle in radians from -PI to PI
         return Math.atan2(deltaY, deltaX);
+    }
+
+    /**
+     * Calculates the relative angle in radians required for the turret to face a target point,
+     * normalized relative to the current heading of the robot frame.
+     */
+    public static double calculateTurretAngleRelative(double robotX, double robotY, double robotHeadingRad, double targetX, double targetY) {
+        double absTargetAngle = calculateTurretAngle(robotX, robotY, targetX, targetY);
+        double relAngle = absTargetAngle - robotHeadingRad;
+        return Math.atan2(Math.sin(relAngle), Math.cos(relAngle));
     }
 }

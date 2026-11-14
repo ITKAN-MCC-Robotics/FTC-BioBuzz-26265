@@ -138,26 +138,24 @@ public class PinpointMechanism {
     }
 
     /**
-     * Recalibrates internal IMU and resets position to Red Alliance Audience Wall (2nd Tile):
-     * X = -36.0", Y = -63.0", Heading = 90.0 degrees.
+     * Recalibrates internal IMU and resets position to Red Alliance Start (Pedro: 36, 9, 90° | FTC: 63, -36, 180°):
      * Robot MUST be stationary during call.
      */
     public void resetToAudienceWallRed() {
         if (pinpoint != null) {
             pinpoint.resetPosAndIMU();
-            pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, FieldCoordinates.RED_START_X, FieldCoordinates.RED_START_Y, AngleUnit.DEGREES, FieldCoordinates.RED_START_HEADING));
+            pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, FieldCoordinates.FTC_RED_START_X, FieldCoordinates.FTC_RED_START_Y, AngleUnit.DEGREES, FieldCoordinates.FTC_RED_START_HEADING));
         }
     }
 
     /**
-     * Recalibrates internal IMU and resets position to Blue Alliance Audience Wall (2nd Tile):
-     * X = 36.0", Y = -63.0", Heading = 90.0 degrees.
+     * Recalibrates internal IMU and resets position to Blue Alliance Start (Pedro: 106, 132, 270° | FTC: -60, 34, 0°):
      * Robot MUST be stationary during call.
      */
     public void resetToAudienceWallBlue() {
         if (pinpoint != null) {
             pinpoint.resetPosAndIMU();
-            pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, FieldCoordinates.BLUE_START_X, FieldCoordinates.BLUE_START_Y, AngleUnit.DEGREES, FieldCoordinates.BLUE_START_HEADING));
+            pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, FieldCoordinates.FTC_BLUE_START_X, FieldCoordinates.FTC_BLUE_START_Y, AngleUnit.DEGREES, FieldCoordinates.FTC_BLUE_START_HEADING));
         }
     }
 
@@ -219,29 +217,21 @@ public class PinpointMechanism {
     }
 
     /**
-     * Calculates turret angle required to target the Red Alliance target.
+     * Calculates turret angle required to target the Red Alliance target based on current Pedro Y position.
      * @return Target turret angle in radians
      */
     public double getAngleToRedTarget() {
-        return FieldCoordinates.calculateTurretAngle(
-                getX(DistanceUnit.INCH),
-                getY(DistanceUnit.INCH),
-                FieldCoordinates.RED_HIVE_TARGET_X,
-                FieldCoordinates.RED_HIVE_TARGET_Y
-        );
+        double[] target = FieldCoordinates.getTargetCoordinatesPedro(false, getPedroY());
+        return FieldCoordinates.calculateTurretAngle(getPedroX(), getPedroY(), target[0], target[1]);
     }
 
     /**
-     * Calculates turret angle required to target the Blue Alliance target.
+     * Calculates turret angle required to target the Blue Alliance target based on current Pedro Y position.
      * @return Target turret angle in radians
      */
     public double getAngleToBlueTarget() {
-        return FieldCoordinates.calculateTurretAngle(
-                getX(DistanceUnit.INCH),
-                getY(DistanceUnit.INCH),
-                FieldCoordinates.BLUE_HIVE_TARGET_X,
-                FieldCoordinates.BLUE_HIVE_TARGET_Y
-        );
+        double[] target = FieldCoordinates.getTargetCoordinatesPedro(true, getPedroY());
+        return FieldCoordinates.calculateTurretAngle(getPedroX(), getPedroY(), target[0], target[1]);
     }
 
     /**

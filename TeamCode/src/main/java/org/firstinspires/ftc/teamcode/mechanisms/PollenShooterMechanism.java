@@ -12,10 +12,10 @@ import com.qualcomm.robotcore.util.Range;
  * Uses closed-loop PIDF velocity control based on motor encoder specifications.
  */
 public class PollenShooterMechanism {
-    public static final double DEFAULT_RPM = 4700.0;
-    public static final double MAX_RPM = 6000.0;
+    public static final double DEFAULT_RPM = 3000.0;
+    public static final double MAX_RPM = 4000.0;
     public static final double TICKS_PER_REV = 28.0; // 28 TPR for goBILDA / REV 1:1 motor
-    public static final double RPM_TOLERANCE = 300.0; // Speed permissive tolerance
+    public static final double RPM_TOLERANCE = 150.0; // Speed permissive tolerance
 
     private DcMotorEx shooterP;
     private double targetRpm = DEFAULT_RPM;
@@ -38,7 +38,7 @@ public class PollenShooterMechanism {
             // Configure PIDF feedforward & proportional gain for closed-loop velocity control
             // Max Ticks/Sec = (6000 RPM * 28 TPR) / 60 = 2800 ticks/sec
             double maxTicksPerSecond = (MAX_RPM * TICKS_PER_REV) / 60.0;
-            double f = 32767.0 / maxTicksPerSecond; // Feedforward F ≈ 11.7
+            double f = 20000 / maxTicksPerSecond;
             double p = 10.0;
             double i = 1.0;
             double d = 0.0;
@@ -168,12 +168,12 @@ public class PollenShooterMechanism {
     }
 
     /**
-     * Checks if actual RPM is within speed permissive tolerance or at least 75% of target speed.
-     * @return true if speed setpoint reached or shooter hardware disabled
+     * Checks if actual RPM is within speed permissive tolerance (100 RPM).
+     * @return true if speed setpoint reached within tolerance or shooter hardware disabled
      */
     public boolean isAtTargetSpeed() {
         if (shooterP == null || targetRpm <= 0) return true;
         double currentRpm = getCurrentRpm();
-        return Math.abs(currentRpm - targetRpm) <= RPM_TOLERANCE || currentRpm >= (targetRpm * 0.75);
+        return Math.abs(currentRpm - targetRpm) <= RPM_TOLERANCE;
     }
 }

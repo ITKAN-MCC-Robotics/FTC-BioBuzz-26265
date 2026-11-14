@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.teamcode.mechanisms.Autoaim;
 import org.firstinspires.ftc.teamcode.mechanisms.DriveTrainMechanism;
 import org.firstinspires.ftc.teamcode.mechanisms.IntakeMechanism;
 import org.firstinspires.ftc.teamcode.mechanisms.PinpointMechanism;
@@ -19,25 +20,25 @@ import org.firstinspires.ftc.teamcode.mechanisms.TransferMechanism;
  * - Transfer Motor & Shooter Servo Gate
  * - Intake Motor
  * - GoBilda Pinpoint Odometry Computer (Field Localization)
- *
- * Disabled / Under Construction:
- * - Turret Aiming (no axon servo installed yet)
+ * - Turret Autoaim (Axon Mini MK2 Servo "turretP" & Encoder "turretPfeedback")
  *
  * Controls:
  * - Left Stick Y: Drive forward/backward
  * - Left Stick X: Strafe left/right
  * - Right Stick X: Rotate
+ * - Left Trigger: Hold to engage Turret Autoaim
+ * - Left Bumper: Force turret back to center position (0.5)
  * - A Button: Start shooting sequence (spins flywheel, opens gate & runs transfer motor when target speed reached)
  * - B Button: Stop shooting sequence (closes gate & stops transfer motor)
- * - X Button: Toggle flywheel on/off (default 4600 RPM)
+ * - X Button: Toggle flywheel on/off (default 3000 RPM)
  * - Y Button: Clear transfer & intake (reverses transfer & intake motors, opens gate)
  * - Right Trigger: Run intake motor & transfer motor (opens gate to feed pollen into staging/shooter)
  * - Right Bumper: Reverse intake motor only (transfer stopped, gate closed)
- * - Back Button: Reset Pinpoint Odometry position & IMU to (0,0,0)
+ * - Back Button: Reset Pinpoint Odometry position & IMU to alliance starting pose
  * - D-Pad Up: Increase shooter flywheel speed (100 RPM)
  * - D-Pad Down: Decrease shooter flywheel speed (100 RPM)
- * - D-Pad Right: Manually open shooter gate
- * - D-Pad Left: Manually close shooter gate
+ * - D-Pad Right: Toggle Flower Ramp servo position (Open 0.435 / Closed 0.75)
+ * - D-Pad Left: Toggle Shooter Gate servo position (Open 0.53 / Closed 0.66)
  */
 @TeleOp(name = "Biobuzz TeleOp", group = "TeleOp")
 public class BiobuzzTeleOp extends OpMode {
@@ -57,9 +58,7 @@ public class BiobuzzTeleOp extends OpMode {
     private final TransferMechanism transfer = new TransferMechanism();
     private final IntakeMechanism intake = new IntakeMechanism();
     private final PinpointMechanism pinpoint = new PinpointMechanism();
-
-    // Mechanisms under construction
-    // private final Autoaim autoaim = new Autoaim();
+    private final Autoaim autoaim = new Autoaim();
 
     // State tracking variables
     private Alliance selectedAlliance = Alliance.UNSELECTED;
@@ -69,7 +68,6 @@ public class BiobuzzTeleOp extends OpMode {
     // Previous button states for edge detection / debouncing
     private boolean prevX = false;
     private boolean prevBack = false;
-    private boolean prevLeftBumper = false;
     private boolean prevDpadUp = false;
     private boolean prevDpadDown = false;
     private boolean prevDpadRight = false;
@@ -83,17 +81,14 @@ public class BiobuzzTeleOp extends OpMode {
         shooter.init(hardwareMap);
         intake.init(hardwareMap);
         pinpoint.init(hardwareMap);
-
-        // --- UNDER CONSTRUCTION: Disabled until hardware installed ---
-        // autoaim.init(hardwareMap); // Turret / Axon servo not ready
+        autoaim.init(hardwareMap);
 
         telemetry.addLine("=== BIOBUZZ TELEOP INITIALIZED ===");
-        telemetry.addLine("Active: Drivetrain, Shooter, Transfer, Intake, Shooter Gate, Pinpoint Odom");
-        telemetry.addLine("Disabled: Turret Autoaim");
+        telemetry.addLine("Active: Drivetrain, Shooter, Transfer, Intake, Shooter Gate, Flower Ramp, Pinpoint Odom, Turret Autoaim");
         telemetry.addLine("");
         telemetry.addLine("=== ALLIANCE SELECTION REQUIRED ===");
-        telemetry.addLine("Press [B] for RED Alliance  (Start: Tile 2, X: -36.0\", Y: -63.0\", 90°)");
-        telemetry.addLine("Press [X] for BLUE Alliance (Start: Tile 2, X:  36.0\", Y: -63.0\", 90°)");
+        telemetry.addLine("Press [B] for RED Alliance  (Pedro Start: 36, 9, 90°)");
+        telemetry.addLine("Press [X] for BLUE Alliance (Pedro Start: 106, 132, 270°)");
     }
 
     @Override
@@ -109,8 +104,8 @@ public class BiobuzzTeleOp extends OpMode {
         telemetry.addLine("=== ALLIANCE SELECTION ===");
         telemetry.addLine("Press [B] for RED Alliance | Press [X] for BLUE Alliance");
         telemetry.addData("Selected Alliance", selectedAlliance == Alliance.UNSELECTED ? "NONE (Default: RED)" : selectedAlliance);
-        telemetry.addData("Starting Pose", "X: %.1f\", Y: %.1f\", Heading: %.1f°",
-                pinpoint.getX(DistanceUnit.INCH), pinpoint.getY(DistanceUnit.INCH), pinpoint.getHeading(AngleUnit.DEGREES));
+        telemetry.addData("Pedro Start Pose", "X: %.1f\", Y: %.1f\", Heading: %.1f°",
+                pinpoint.getPedroX(), pinpoint.getPedroY(), pinpoint.getHeading(AngleUnit.DEGREES));
         telemetry.update();
     }
 
@@ -128,7 +123,7 @@ public class BiobuzzTeleOp extends OpMode {
         // --- 1. Update Pinpoint Odometry ---
         pinpoint.update();
 
-        // Reset Pinpoint Position & IMU to selected alliance starting position if Back button pressed while stationary
+        // Reset Pinpoint Position & IMU to selected alliance starting position if Back button pressed
         boolean currentBack = gamepad1.back;
         if (currentBack && !prevBack) {
             if (selectedAlliance == Alliance.BLUE) {
@@ -166,13 +161,13 @@ public class BiobuzzTeleOp extends OpMode {
 
         boolean currentDpadRight = gamepad1.dpad_right;
         if (currentDpadRight && !prevDpadRight) {
-            isManualGateOpen = true;
+            transfer.toggleFlowerRamp();
         }
         prevDpadRight = currentDpadRight;
 
         boolean currentDpadLeft = gamepad1.dpad_left;
         if (currentDpadLeft && !prevDpadLeft) {
-            isManualGateOpen = false;
+            isManualGateOpen = !isManualGateOpen;
         }
         prevDpadLeft = currentDpadLeft;
 
@@ -207,8 +202,8 @@ public class BiobuzzTeleOp extends OpMode {
                 transfer.openShooterGate();
                 transfer.reverseTransfer();
             } else if (gamepad1.right_trigger > 0.1) {
-                // Right Trigger (Intake): run transfer forward and keep gate closed (unless manually opened via D-pad Right)
-                if (isManualGateOpen || gamepad1.dpad_right) {
+                // Right Trigger (Intake): run transfer forward and keep gate closed (unless manually toggled open via D-pad Left)
+                if (isManualGateOpen) {
                     transfer.openShooterGate();
                 } else {
                     transfer.closeShooterGate();
@@ -217,8 +212,8 @@ public class BiobuzzTeleOp extends OpMode {
             } else {
                 // Right Bumper (Reverse Intake) or Idle: stop transfer motor
                 transfer.stopTransfer();
-                // D-pad manual gate control: open gate if manual toggle or D-pad Right is active, otherwise close
-                if (isManualGateOpen || gamepad1.dpad_right) {
+                // D-pad manual gate control: open gate if manual toggle (D-pad Left) is active, otherwise close
+                if (isManualGateOpen) {
                     transfer.openShooterGate();
                 } else {
                     transfer.closeShooterGate();
@@ -245,19 +240,35 @@ public class BiobuzzTeleOp extends OpMode {
             intake.stopIntake();
         }
 
+        // --- 7. Turret Autoaim Execution ---
+        // Left Trigger engages auto-aim; Left Bumper manually forces center position (0.5)
+        boolean engageAutoaim = gamepad1.left_trigger > 0.1;
+        boolean forceCenter = gamepad1.left_bumper;
+
+        double robotPedroX = pinpoint.getPedroX();
+        double robotPedroY = pinpoint.getPedroY();
+        double robotPedroHeadingRad = Math.toRadians(pinpoint.getHeading(AngleUnit.DEGREES));
+
+        autoaim.update(engageAutoaim, forceCenter, robotPedroX, robotPedroY, robotPedroHeadingRad, selectedAlliance == Alliance.BLUE);
+
         // --- Update Transfer Stall Detection ---
         transfer.update();
 
-        // --- 7. Telemetry ---
+        // --- 8. Telemetry ---
         telemetry.addData("--- ALLIANCE ---", selectedAlliance);
         telemetry.addData("--- PINPOINT ODOMETRY ---", pinpoint.isInitialized() ? "OK" : "ERROR");
         telemetry.addData("Status", pinpoint.getDeviceStatus());
-        telemetry.addData("FTC Pos (X, Y in)", "X: %.2f, Y: %.2f", pinpoint.getX(DistanceUnit.INCH), pinpoint.getY(DistanceUnit.INCH));
+        telemetry.addData("Pedro Pos (X, Y in)", "X: %.2f, Y: %.2f", robotPedroX, robotPedroY);
         telemetry.addData("Heading (Deg)", "%.1f°", pinpoint.getHeading(AngleUnit.DEGREES));
-        telemetry.addData("Pedro Pos (X, Y)", "X: %.2f, Y: %.2f", pinpoint.getPedroX(), pinpoint.getPedroY());
-        telemetry.addData("Active Target Angle", "%.1f°", Math.toDegrees(selectedAlliance == Alliance.BLUE ? pinpoint.getAngleToBlueTarget() : pinpoint.getAngleToRedTarget()));
-        telemetry.addData("Target Angle (Red)", "%.1f°", Math.toDegrees(pinpoint.getAngleToRedTarget()));
-        telemetry.addData("Target Angle (Blue)", "%.1f°", Math.toDegrees(pinpoint.getAngleToBlueTarget()));
+        telemetry.addData("FTC Pos (X, Y in)", "X: %.2f, Y: %.2f", pinpoint.getX(DistanceUnit.INCH), pinpoint.getY(DistanceUnit.INCH));
+
+        telemetry.addData("--- TURRET AUTOAIM ---", forceCenter ? "FORCE CENTER (LB)" : (autoaim.isAutoaimActive() ? "AUTO-AIM ENGAGED (LT)" : "IDLE CENTER"));
+        telemetry.addData("Active Goal Target (X, Y)", "X: %.2f, Y: %.2f", autoaim.getActiveTargetX(), autoaim.getActiveTargetY());
+        telemetry.addData("Turret Servo Pos", "%.3f %s", autoaim.getTurretPosition(), autoaim.isServoAttached() ? "(SERVO OK)" : "(SERVO MISSING)");
+        telemetry.addData("Target Angle (Calc)", "%.1f°", autoaim.getCalculatedTargetAngleDeg());
+        telemetry.addData("Turret Angle (Clamped)", "%.1f° %s", autoaim.getClampedTurretAngleDeg(), autoaim.isClamped() ? "[LIMIT " + Autoaim.MAX_TURRET_LIMIT_DEG + "°]" : "");
+        telemetry.addData("Feedback Encoder", "%s | Volts: %.2f V | Angle: %.1f°",
+                autoaim.isEncoderAttached() ? "OK" : "MISSING", autoaim.getFeedbackVoltage(), autoaim.getFeedbackAngleDeg());
 
         telemetry.addData("--- SHOOTER (READY) ---", "");
         telemetry.addData("Shooting Sequence", isShootingSequenceActive ? "ACTIVE" : "STOPPED");
@@ -273,10 +284,12 @@ public class BiobuzzTeleOp extends OpMode {
         telemetry.addData("Shooter Gate State", transfer.isShooterGateOpen() ? "OPEN" : "CLOSED");
         telemetry.addData("Gate Servo Position", "%.3f", transfer.getShooterGatePosition());
 
+        telemetry.addData("--- FLOWER RAMP ---", transfer.isFlowerRampAttached() ? "SERVO READY" : "SERVO UNCONFIGURED / NULL");
+        telemetry.addData("Flower Ramp State", transfer.isFlowerRampOpen() ? "OPEN (0.435)" : "CLOSED (0.75)");
+        telemetry.addData("Flower Ramp Position", "%.3f", transfer.getFlowerRampPosition());
+
         telemetry.addData("--- INTAKE (READY) ---", "");
         telemetry.addData("Intake Power", "%.2f", intake.getIntakePower());
-
-        telemetry.addData("--- TURRET / AUTOAIM ---", "DISABLED (No Axon Servo)");
 
         telemetry.addData("--- DRIVETRAIN (READY) ---", "");
         telemetry.addData("Drive Inputs", "D: %.2f, S: %.2f, R: %.2f", drive, strafe, rotate);
@@ -288,6 +301,7 @@ public class BiobuzzTeleOp extends OpMode {
         intake.stopIntake();
         transfer.stopTransfer();
         transfer.closeShooterGate();
+        transfer.closeFlowerRamp();
         shooter.stopShooter();
     }
 }

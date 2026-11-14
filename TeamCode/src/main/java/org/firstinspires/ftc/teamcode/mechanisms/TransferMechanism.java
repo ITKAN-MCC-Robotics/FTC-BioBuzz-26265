@@ -9,28 +9,35 @@ import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 
 /**
  * Transfer Mechanism for Biobuzz robot.
- * Controls the motor "transferMotor" and servo "shooterPgate".
+ * Controls the motor "transferMotor" and servos "shooterPgate" and "flowerRamp".
  * Includes current-based stall detection to prevent motor burnout and handle jams.
  */
 public class TransferMechanism {
-    public static final double DEFAULT_TRANSFER_POWER = 0.8;
+    public static final double DEFAULT_TRANSFER_POWER = 1.0;
     public static final double GATE_OPEN_POS = 0.53;
     public static final double GATE_CLOSED_POS = 0.66;
 
+    // Flower Ramp Servo positions
+    public static final double FLOWER_RAMP_CLOSED_POS = 0.75;
+    public static final double FLOWER_RAMP_OPEN_POS = 0.415;
+
     // Stall detection settings
-    public static final double STALL_CURRENT_THRESHOLD_AMPS = 5; // Current threshold in Amps
+    public static final double STALL_CURRENT_THRESHOLD_AMPS = 4.1; // Current threshold in Amps
     public static final long STALL_DURATION_MS = 250;              // Filter duration in ms to prevent false positives from inrush current
 
     private DcMotorEx transferMotor;
     private Servo shooterPgate;
+    private Servo flowerRamp;
+
     private boolean gateOpen = false;
+    private boolean flowerRampOpen = false;
 
     // Stall detection state
     private boolean isStalled = false;
     private long stallStartTimeMs = 0;
 
     /**
-     * Initializes hardware for transfer motor and shooter gate servo.
+     * Initializes hardware for transfer motor, shooter gate servo, and flower ramp servo.
      * @param hwMap HardwareMap from OpMode
      */
     public void init(HardwareMap hwMap) {
@@ -49,6 +56,12 @@ public class TransferMechanism {
         shooterPgate = getHardwareWithFallback(hwMap, Servo.class, "shooterPgate");
         if (shooterPgate != null) {
             closeShooterGate();
+        }
+
+        // Try hardware lookup for flower ramp servo with fallbacks
+        flowerRamp = getHardwareWithFallback(hwMap, Servo.class, "flowerRamp", "ramp");
+        if (flowerRamp != null) {
+            closeFlowerRamp();
         }
     }
 
@@ -203,6 +216,78 @@ public class TransferMechanism {
      */
     public boolean isShooterGateOpen() {
         return gateOpen;
+    }
+
+    /**
+     * Toggles the shooter gate servo position between open and closed.
+     */
+    public void toggleShooterGate() {
+        if (gateOpen) {
+            closeShooterGate();
+        } else {
+            openShooterGate();
+        }
+    }
+
+    /**
+     * Opens flower ramp servo allowing pollen balls to unload from flower mechanism.
+     */
+    public void openFlowerRamp() {
+        setFlowerRampPosition(FLOWER_RAMP_OPEN_POS);
+        flowerRampOpen = true;
+    }
+
+    /**
+     * Closes flower ramp servo into stowed position.
+     */
+    public void closeFlowerRamp() {
+        setFlowerRampPosition(FLOWER_RAMP_CLOSED_POS);
+        flowerRampOpen = false;
+    }
+
+    /**
+     * Toggles flower ramp servo position between open (0.435) and closed (0.75).
+     */
+    public void toggleFlowerRamp() {
+        if (flowerRampOpen) {
+            closeFlowerRamp();
+        } else {
+            openFlowerRamp();
+        }
+    }
+
+    /**
+     * Sets flower ramp servo position directly.
+     * @param position Servo position (0.0 to 1.0)
+     */
+    public void setFlowerRampPosition(double position) {
+        if (flowerRamp != null) {
+            flowerRamp.setPosition(position);
+        }
+    }
+
+    /**
+     * Returns whether flower ramp is currently open.
+     * @return true if open
+     */
+    public boolean isFlowerRampOpen() {
+        return flowerRampOpen;
+    }
+
+    /**
+     * Returns flower ramp servo position.
+     * @return current position
+     */
+    public double getFlowerRampPosition() {
+        return flowerRamp != null ? flowerRamp.getPosition() : 0.0;
+    }
+
+    /**
+     * Checks if flower ramp servo hardware is initialized.
+     * @return true if servo is non-null
+     */
+    public boolean isFlowerRampAttached() {
+        return flowerRamp != null;
     }
 
     /**
