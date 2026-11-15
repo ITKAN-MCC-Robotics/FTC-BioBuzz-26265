@@ -12,10 +12,10 @@ import com.qualcomm.robotcore.util.Range;
  * Uses closed-loop PIDF velocity control based on motor encoder specifications.
  */
 public class PollenShooterMechanism {
-    public static final double DEFAULT_RPM = 3000.0;
+    public static final double DEFAULT_RPM = 2900.0;
     public static final double MAX_RPM = 4000.0;
     public static final double TICKS_PER_REV = 28.0; // 28 TPR for goBILDA / REV 1:1 motor
-    public static final double RPM_TOLERANCE = 150.0; // Speed permissive tolerance
+    public static final double RPM_TOLERANCE = 180.0; // Speed permissive tolerance
 
     private DcMotorEx shooterP;
     private double targetRpm = DEFAULT_RPM;
