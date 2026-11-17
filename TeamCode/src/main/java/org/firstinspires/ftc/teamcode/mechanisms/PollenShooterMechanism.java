@@ -21,6 +21,12 @@ public class PollenShooterMechanism {
     private double targetRpm = DEFAULT_RPM;
     private boolean flywheelEnabled = false;
 
+    // PIDF tuning coefficients
+    private double p = 7.3;
+    private double i = 1.0;
+    private double d = 0.0;
+    private double f = 14000.0 / ((MAX_RPM * TICKS_PER_REV) / 60.0);
+
     /**
      * Initializes the shooter hardware and configures closed-loop PIDF velocity control.
      * @param hwMap The hardware map from the OpMode
@@ -36,15 +42,92 @@ public class PollenShooterMechanism {
             shooterP.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
             // Configure PIDF feedforward & proportional gain for closed-loop velocity control
-            // Max Ticks/Sec = (6000 RPM * 28 TPR) / 60 = 2800 ticks/sec
-            double maxTicksPerSecond = (MAX_RPM * TICKS_PER_REV) / 60.0;
-            double f = 20000 / maxTicksPerSecond;
-            double p = 10.0;
-            double i = 1.0;
-            double d = 0.0;
+            updatePIDF();
+        }
+    }
 
+    /**
+     * Applies the current PIDF coefficients to the motor hardware.
+     */
+    public void updatePIDF() {
+        if (shooterP != null) {
             shooterP.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, new PIDFCoefficients(p, i, d, f));
         }
+    }
+
+    /**
+     * Returns the current Proportional gain (P factor).
+     */
+    public double getP() {
+        if (shooterP != null) {
+            try {
+                return shooterP.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER).p;
+            } catch (Exception ignored) {}
+        }
+        return p;
+    }
+
+    /**
+     * Returns the current Integral gain (I factor).
+     */
+    public double getI() {
+        if (shooterP != null) {
+            try {
+                return shooterP.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER).i;
+            } catch (Exception ignored) {}
+        }
+        return i;
+    }
+
+    /**
+     * Returns the current Derivative gain (D factor).
+     */
+    public double getD() {
+        if (shooterP != null) {
+            try {
+                return shooterP.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER).d;
+            } catch (Exception ignored) {}
+        }
+        return d;
+    }
+
+    /**
+     * Returns the current Feedforward gain (F factor).
+     */
+    public double getF() {
+        if (shooterP != null) {
+            try {
+                return shooterP.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER).f;
+            } catch (Exception ignored) {}
+        }
+        return f;
+    }
+
+    /**
+     * Sets all PIDF coefficients for closed-loop velocity control.
+     */
+    public void setPIDF(double p, double i, double d, double f) {
+        this.p = p;
+        this.i = i;
+        this.d = d;
+        this.f = f;
+        updatePIDF();
+    }
+
+    /**
+     * Sets the Proportional gain (P factor).
+     */
+    public void setP(double p) {
+        this.p = p;
+        updatePIDF();
+    }
+
+    /**
+     * Sets the Feedforward gain (F factor).
+     */
+    public void setF(double f) {
+        this.f = f;
+        updatePIDF();
     }
 
     private DcMotorEx getMotorWithFallback(HardwareMap hwMap, String... names) {
