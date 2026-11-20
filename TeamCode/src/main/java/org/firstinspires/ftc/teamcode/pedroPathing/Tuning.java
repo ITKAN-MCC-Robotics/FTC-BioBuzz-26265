@@ -1329,7 +1329,7 @@ class CentripetalTuner extends OpMode {
  */
 class Triangle extends OpMode {
 
-    private final Pose startPose = new Pose(0, 0, Math.toRadians(0));
+    private final Pose startPose = new Pose(56.5, 8.5, Math.toRadians(90));
     private final Pose interPose = new Pose(24, -24, Math.toRadians(90));
     private final Pose endPose = new Pose(24, 24, Math.toRadians(45));
 
@@ -1625,7 +1625,7 @@ class SwerveTurnTest extends OpMode {
 class OffsetsTuner extends OpMode {
     @Override
     public void init() {
-        follower.setStartingPose(new Pose(72,72));
+        follower.setStartingPose(new Pose(56.5,8.5));
         follower.update();
         drawCurrent();
     }

@@ -19,7 +19,7 @@ public class TransferMechanism {
 
     // Flower Ramp Servo positions
     public static final double FLOWER_RAMP_CLOSED_POS = 0.75;
-    public static final double FLOWER_RAMP_OPEN_POS = 0.415;
+    public static final double FLOWER_RAMP_OPEN_POS = 0.44;
 
     // Stall detection settings
     public static final double STALL_CURRENT_THRESHOLD_AMPS = 4.1; // Current threshold in Amps

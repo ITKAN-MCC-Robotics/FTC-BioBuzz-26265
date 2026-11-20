@@ -93,8 +93,8 @@ public class ShooterTuningTeleOp extends OpMode {
         telemetry.addLine("Active: Drivetrain, Shooter, Transfer, Intake, Shooter Gate, Flower Ramp, Pinpoint Odom, Turret Autoaim");
         telemetry.addLine("");
         telemetry.addLine("=== ALLIANCE SELECTION REQUIRED ===");
-        telemetry.addLine("Press [B] for RED Alliance  (Pedro Start: 36, 9, 90°)");
-        telemetry.addLine("Press [X] for BLUE Alliance (Pedro Start: 106, 132, 270°)");
+        telemetry.addLine("Press [B] for RED Alliance  (Pedro Start: 85, 132, -90°)");
+        telemetry.addLine("Press [X] for BLUE Alliance (Pedro Start: 54.5, 8.5, 90°)");
     }
 
     @Override

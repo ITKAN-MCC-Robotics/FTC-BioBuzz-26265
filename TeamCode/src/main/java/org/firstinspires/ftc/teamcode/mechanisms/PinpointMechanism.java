@@ -138,7 +138,7 @@ public class PinpointMechanism {
     }
 
     /**
-     * Recalibrates internal IMU and resets position to Red Alliance Start (Pedro: 36, 9, 90° | FTC: 63, -36, 180°):
+     * Recalibrates internal IMU and resets position to Red Alliance Start (Pedro: 85, 132, -90° | FTC: -60, 13, 0°):
      * Robot MUST be stationary during call.
      */
     public void resetToAudienceWallRed() {
@@ -149,7 +149,7 @@ public class PinpointMechanism {
     }
 
     /**
-     * Recalibrates internal IMU and resets position to Blue Alliance Start (Pedro: 106, 132, 270° | FTC: -60, 34, 0°):
+     * Recalibrates internal IMU and resets position to Blue Alliance Start (Pedro: 54.5, 8.5, 90° | FTC: 63.5, -17.5, 180°):
      * Robot MUST be stationary during call.
      */
     public void resetToAudienceWallBlue() {

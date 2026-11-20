@@ -13,7 +13,7 @@ import com.qualcomm.robotcore.util.Range;
  */
 public class PollenShooterMechanism {
     public static final double DEFAULT_RPM = 2900.0;
-    public static final double MAX_RPM = 4000.0;
+    public static final double MAX_RPM = 6000.0;
     public static final double TICKS_PER_REV = 28.0; // 28 TPR for goBILDA / REV 1:1 motor
     public static final double RPM_TOLERANCE = 180.0; // Speed permissive tolerance
 
@@ -25,7 +25,7 @@ public class PollenShooterMechanism {
     private double p = 7.3;
     private double i = 1.0;
     private double d = 0.0;
-    private double f = 14000.0 / ((MAX_RPM * TICKS_PER_REV) / 60.0);
+    private double f = 11200 / ((MAX_RPM * TICKS_PER_REV) / 60.0); // F = 4.0 per tuning
 
     /**
      * Initializes the shooter hardware and configures closed-loop PIDF velocity control.

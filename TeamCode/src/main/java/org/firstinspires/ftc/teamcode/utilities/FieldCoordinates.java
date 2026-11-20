@@ -13,24 +13,25 @@ public class FieldCoordinates {
     // Pedro Pathing Starting & Reset Position Coordinates
     // Field dimensions: 141.5" x 141.5" (Origin 0,0 at bottom-left corner)
     // ---------------------------------------------------------
-    // Red Alliance Start: Middle of 2nd tile by audience wall
-    public static final double PEDRO_RED_START_X = 36.0;
-    public static final double PEDRO_RED_START_Y = 9.0;
-    public static final double PEDRO_RED_START_HEADING = 90.0; // Facing Up (+Y)
+    // Red Alliance Start
+    public static final double PEDRO_RED_START_X = 85.0;
+    public static final double PEDRO_RED_START_Y = 132.0;
+    public static final double PEDRO_RED_START_HEADING = -90.0; // Facing Down (-Y)
 
-    // Blue Alliance Start: Middle of 2nd tile by opposite wall
-    public static final double PEDRO_BLUE_START_X = 106.0;
-    public static final double PEDRO_BLUE_START_Y = 132.0;
-    public static final double PEDRO_BLUE_START_HEADING = 270.0; // Facing Down (-Y)
+    // Blue Alliance Start
+    public static final double PEDRO_BLUE_START_X = 54.5;
+    public static final double PEDRO_BLUE_START_Y = 8.5;
+    public static final double PEDRO_BLUE_START_HEADING = 90.0; // Facing Up (+Y)
 
     // FTC Standard equivalents (Center at 0,0)
-    public static final double FTC_RED_START_X = 63.0;
-    public static final double FTC_RED_START_Y = -36.0;
-    public static final double FTC_RED_START_HEADING = 180.0;
 
-    public static final double FTC_BLUE_START_X = -60.0;
-    public static final double FTC_BLUE_START_Y = 34.0;
-    public static final double FTC_BLUE_START_HEADING = 0.0;
+    public static final double FTC_RED_START_X = -60.0;
+    public static final double FTC_RED_START_Y = 13.0;
+    public static final double FTC_RED_START_HEADING = 0.0;
+
+    public static final double FTC_BLUE_START_X = 63.5;
+    public static final double FTC_BLUE_START_Y = -17.5;
+    public static final double FTC_BLUE_START_HEADING = 180.0;
 
     // Field Y divider threshold (middle of field in Pedro coordinates)
     public static final double FIELD_MID_Y_PEDRO = 70.75;
@@ -83,7 +84,7 @@ public class FieldCoordinates {
      * Per Pedro Pathing specification: Pedro X = FTC Y + 72.
      */
     public static double ftcToPedroX(double ftcX, double ftcY) {
-        return ftcY + 72.0;
+        return ftcY + 86.5;
     }
 
     /**
